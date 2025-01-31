@@ -190,13 +190,13 @@ public:
 		glm::vec3 rotationAxis = glm::cross(referenceVector, direction);
 		float angle = acos(glm::dot(referenceVector, direction));
 
-		// rotuje model w kierunku poruszania się
 		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angle, rotationAxis);
 
-		glm::mat4 modelMatrix = glm::translate(position) * rotationMatrix * glm::scale(glm::vec3(0.7f));
+		glm::mat4 yRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0, 1, 0));
+
+		glm::mat4 modelMatrix = glm::translate(position) * rotationMatrix * yRotationMatrix * glm::scale(glm::vec3(0.7f));
 
 		return modelMatrix;
-
 	}
 
 };

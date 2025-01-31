@@ -379,7 +379,7 @@ void init(GLFWwindow* window)
 
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 
-	for (int i = 0; i <= 140; i++) {
+	for (int i = 0; i <= 40; i++) {
 		boids.push_back(new Boid(randomVec3()));
 	}
 

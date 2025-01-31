@@ -83,6 +83,9 @@ std::vector<Boid*> boids;
 float lastTime = -1.f;
 float deltaTime = 0.f;
 
+// global variables needed for imgui:
+glm::vec3 aquarium_color = glm::vec3(1.0f);
+
 
 void updateDeltaTime(float time) {
 	if (lastTime < 0) {
@@ -239,7 +242,7 @@ void renderScene(GLFWwindow* window)
 
 
 	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		glm::vec3(1.f));
+		aquarium_color);
 
 
 	for (Boid* b : boids) {
@@ -252,9 +255,36 @@ void renderScene(GLFWwindow* window)
 
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
-	ImGui::Text("Hello there!");
-	ImGui::End();
+	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
+	ImGui::Text("Set aquarium color:");
+	ImGui::ColorEdit3("change color", (float*)&aquarium_color);
+	ImGui::Text("Enable or disable the rules:");
 
+	// Seperation ON/OFF:
+	static bool seperationEnabled = true;
+	ImGui::Checkbox("Seperation", &seperationEnabled);
+	float newSeparationWeight = seperationEnabled ? 2.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setSeparationWeight(newSeparationWeight);
+	}
+
+	//Alignment ON/OFF:
+	static bool alignmentEnabled = true;
+	ImGui::Checkbox("Alignment", &alignmentEnabled);
+	float newAlignmentWeight = alignmentEnabled ? 1.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setAlignmentWeight(newAlignmentWeight);
+	}
+
+	//Cohesion ON/OFF:
+	static bool cohesionEnabled = true;
+	ImGui::Checkbox("Cohesion", &cohesionEnabled);
+	float newCohesionWeight = cohesionEnabled ? 0.001f : 0.0f;
+	for (Boid* b : boids) {
+		b->setCohesionWeight(newCohesionWeight);
+	}
+
+	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

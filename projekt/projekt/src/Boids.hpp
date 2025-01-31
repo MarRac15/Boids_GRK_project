@@ -87,7 +87,20 @@ public:
 		velocity += boundaryForce;
 	}
 
+	void setSeparationWeight(float weight)
+	{
+		SEPARATION_WEIGHT = weight;
+	}
 
+	void setAlignmentWeight(float weight)
+	{
+		ALIGMENT_WEIGHT = weight;
+	}
+
+	void setCohesionWeight(float weight)
+	{
+		COHESION_WEIGHT = weight;
+	}
 
 	glm::vec3 separate(std::vector<Boid*>& boids) {
 		glm::vec3 avoid_vector(0.0f);

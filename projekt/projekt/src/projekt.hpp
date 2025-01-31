@@ -39,7 +39,11 @@ namespace models {
 GLuint depthMapFBO;
 GLuint depthMap;
 
-GLuint program;
+
+GLuint programPBR;
+GLuint programPhSh;
+GLuint programTest;
+GLuint programDepth;
 
 Core::Shader_Loader shaderLoader;
 
@@ -63,7 +67,9 @@ float aspectRatio = 1.f;
 
 float exposition = 1.f;
 
-glm::vec3 pointlightPos = glm::vec3(0, 4, 0);
+
+glm::vec3 pointlightPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
+glm::vec3 pointlightDir = glm::vec3(0., -0.9, 0.5);
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
 glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
@@ -124,46 +130,95 @@ glm::mat4 createPerspectiveMatrix()
 }
 
 
+glm::mat4 createLightViewProjection() {
+	glm::mat4 view = glm::lookAt(pointlightPos, pointlightPos - pointlightDir, glm::vec3(0, 1, 0));
+	//jak ustawić w którą stronę patrzy światło... 
+	//zeby zgadzalo sie z światłem kierunkowym
+
+	glm::mat4 projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.f, 50.f);
+	return projection * view;
+}
+void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
+	glUseProgram(programPhSh);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programPhSh, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	//glUniform3f(glGetUniformLocation(programPhSh, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
+
+	glm::mat4 lightVP = createLightViewProjection();
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+
+
+
+	Core::DrawContext(context);
+}
 
 void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, float roughness, float metallic) {
 
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(program, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniformMatrix4fv(glGetUniformLocation(program, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniformMatrix4fv(glGetUniformLocation(programPBR, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programPBR, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
 
-	glUniform1f(glGetUniformLocation(program, "exposition"), exposition);
+	glUniform1f(glGetUniformLocation(programPBR, "exposition"), exposition);
 
-	glUniform1f(glGetUniformLocation(program, "roughness"), roughness);
-	glUniform1f(glGetUniformLocation(program, "metallic"), metallic);
+	glUniform1f(glGetUniformLocation(programPBR, "roughness"), roughness);
+	glUniform1f(glGetUniformLocation(programPBR, "metallic"), metallic);
 
-	glUniform3f(glGetUniformLocation(program, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programPBR, "color"), color.x, color.y, color.z);
 
-	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programPBR, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
-	glUniform3f(glGetUniformLocation(program, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
-	glUniform3f(glGetUniformLocation(program, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
+	glUniform3f(glGetUniformLocation(programPBR, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
+	glUniform3f(glGetUniformLocation(programPBR, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
 
-	glUniform3f(glGetUniformLocation(program, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
-	glUniform3f(glGetUniformLocation(program, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
+	glUniform3f(glGetUniformLocation(programPBR, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programPBR, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	glUniform3f(glGetUniformLocation(program, "spotlightConeDir"), spotlightConeDir.x, spotlightConeDir.y, spotlightConeDir.z);
-	glUniform3f(glGetUniformLocation(program, "spotlightPos"), spotlightPos.x, spotlightPos.y, spotlightPos.z);
-	glUniform3f(glGetUniformLocation(program, "spotlightColor"), spotlightColor.x, spotlightColor.y, spotlightColor.z);
-	glUniform1f(glGetUniformLocation(program, "spotlightPhi"), spotlightPhi);
+	glUniform3f(glGetUniformLocation(programPBR, "spotlightConeDir"), spotlightConeDir.x, spotlightConeDir.y, spotlightConeDir.z);
+	glUniform3f(glGetUniformLocation(programPBR, "spotlightPos"), spotlightPos.x, spotlightPos.y, spotlightPos.z);
+	glUniform3f(glGetUniformLocation(programPBR, "spotlightColor"), spotlightColor.x, spotlightColor.y, spotlightColor.z);
+	glUniform1f(glGetUniformLocation(programPBR, "spotlightPhi"), spotlightPhi);
 	Core::DrawContext(context);
 
 }
 
 
-void renderShadowapSun() {
+void drawObjectDepth(Core::RenderContext& context, glm::mat4 viewProjection, glm::mat4 modelMatrix) {
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "lightViewProjection"), 1, GL_FALSE, (float*)&viewProjection);
+	Core::DrawContext(context);
+}
+
+
+
+void renderShadowmapPointLight() {
+	glUseProgram(programDepth);
 	float time = glfwGetTime();
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
 
+	glm::mat4 viewProjection = createLightViewProjection();
+
+
+
+	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+	for (Boid* b : boids) {
+		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
+
+	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, WIDTH, HEIGHT);
 }
-
 
 
 void renderScene(GLFWwindow* window)
@@ -178,18 +233,21 @@ void renderScene(GLFWwindow* window)
 
 	float time = glfwGetTime();
 	updateDeltaTime(time);
-	renderShadowapSun();
+	glUseProgram(programPhSh);
+	
+	renderShadowmapPointLight();
 
-	glUseProgram(program);
 
+	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+		glm::vec3(1.f));
 
-	drawObjectPBR(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		glm::vec3(1.f), 0.2, 1.0);
 
 	for (Boid* b : boids) {
 		b->update(boids);
-		drawObjectPBR(models::goldfishContext, b->getMatrix(), b->getGroupColor(), 0.2, 1.0);
+		drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
 	}
+
+	
 
 
 	//IMGUI WINDOWS:
@@ -242,6 +300,26 @@ glm::vec3 randomVec3() {
 	);
 }
 
+void initDepthMap() {
+	glGenFramebuffers(1, &depthMapFBO);
+
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
 
 void init(GLFWwindow* window)
 {
@@ -256,7 +334,11 @@ void init(GLFWwindow* window)
 
 
 	glEnable(GL_DEPTH_TEST);
-	program = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
+	programPBR = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
+	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
+	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
+
+	initDepthMap();
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
@@ -275,7 +357,7 @@ void init(GLFWwindow* window)
 }
 void shutdown(GLFWwindow* window)
 {
-	shaderLoader.DeleteProgram(program);
+	shaderLoader.DeleteProgram(programPhSh);
 }
 
 

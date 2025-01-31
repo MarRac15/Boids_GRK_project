@@ -110,9 +110,6 @@
     <ClInclude Include="src\SOIL\image_DXT.h">
       <Filter>Source Files\SOIL</Filter>
     </ClInclude>
-    <ClInclude Include="src\ex_9_1.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Boids.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -148,12 +145,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader_5_1_tex.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_5_1_tex.vert">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="shaders\shader_8_sun.frag">
       <Filter>Shader Files</Filter>
     </None>
@@ -166,10 +157,22 @@
     <None Include="shaders\shader_9_1.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\shader_depth.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_depth.vert">
+      <Filter>Shader Files</Filter>
+    </None>
     <None Include="shaders\test.frag">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\test.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\with_shadow_mapping.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\with_shadow_mapping.vert">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

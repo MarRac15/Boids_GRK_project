@@ -13,6 +13,13 @@
   <ItemGroup>
     <ClCompile Include="src\Box.cpp" />
     <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\ImGUI\imgui.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_demo.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_draw.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_tables.cpp" />
+    <ClCompile Include="src\ImGUI\imgui_widgets.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Render_Utils.cpp" />
     <ClCompile Include="src\Shader_Loader.cpp" />
@@ -26,6 +33,15 @@
     <ClInclude Include="src\Boids.hpp" />
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\ex_9_1.hpp" />
+    <ClInclude Include="src\ImGUI\imconfig.h" />
+    <ClInclude Include="src\ImGUI\imgui.h" />
+    <ClInclude Include="src\ImGUI\imgui_impl_glfw.h" />
+    <ClInclude Include="src\ImGUI\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\ImGUI\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="src\ImGUI\imgui_internal.h" />
+    <ClInclude Include="src\ImGUI\imstb_rectpack.h" />
+    <ClInclude Include="src\ImGUI\imstb_textedit.h" />
+    <ClInclude Include="src\ImGUI\imstb_truetype.h" />
     <ClInclude Include="src\objload.h" />
     <ClInclude Include="src\projekt.hpp" />
     <ClInclude Include="src\Render_Utils.h" />

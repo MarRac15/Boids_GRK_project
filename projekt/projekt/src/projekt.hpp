@@ -1,4 +1,7 @@
 ﻿#include "glew.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 #include "glm.hpp"
 #include "ext.hpp"
@@ -167,6 +170,12 @@ void renderScene(GLFWwindow* window)
 {
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//ImGUI new frame:
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
 	float time = glfwGetTime();
 	updateDeltaTime(time);
 	renderShadowapSun();
@@ -181,6 +190,15 @@ void renderScene(GLFWwindow* window)
 		b->update(boids);
 		drawObjectPBR(models::goldfishContext, b->getMatrix(), b->getGroupColor(), 0.2, 1.0);
 	}
+
+
+	//IMGUI WINDOWS:
+	ImGui::Begin("Main testing window");
+	ImGui::Text("Hello there!");
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -228,6 +246,14 @@ glm::vec3 randomVec3() {
 void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+	//ImGUI initialization:
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 430");
+
 
 	glEnable(GL_DEPTH_TEST);
 	program = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
@@ -304,4 +330,7 @@ void renderLoop(GLFWwindow* window) {
 		renderScene(window);
 		glfwPollEvents();
 	}
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 }

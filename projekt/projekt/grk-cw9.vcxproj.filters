@@ -19,6 +19,9 @@
     <Filter Include="Source Files\SOIL">
       <UniqueIdentifier>{0af44075-33f4-4953-b1d6-1d28d61d758f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ImGUI">
+      <UniqueIdentifier>{4f7f4278-87de-4603-985e-11f3c2028cc0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Render_Utils.cpp">
@@ -50,6 +53,27 @@
     </ClCompile>
     <ClCompile Include="src\SOIL\image_helper.c">
       <Filter>Source Files\SOIL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_demo.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_draw.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_impl_glfw.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_tables.cpp">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImGUI\imgui_widgets.cpp">
+      <Filter>Source Files\ImGUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -94,6 +118,33 @@
     </ClInclude>
     <ClInclude Include="src\projekt.hpp">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imconfig.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imgui.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imgui_impl_glfw.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imgui_impl_opengl3.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imgui_impl_opengl3_loader.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imgui_internal.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imstb_rectpack.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imstb_textedit.h">
+      <Filter>Source Files\ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImGUI\imstb_truetype.h">
+      <Filter>Source Files\ImGUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

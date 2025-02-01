@@ -224,6 +224,20 @@ void renderShadowmapPointLight() {
 }
 
 
+void renderParticles(const std::vector<Boid*>& boids) {
+	for (const auto& b : boids) {
+		for (const auto& p : b->particles) {
+			if (p.lifetime < p.lifespan) {
+				glm::mat4 modelMatrix = glm::translate(p.position);
+				modelMatrix = glm::scale(modelMatrix, glm::vec3(0.02f));
+				drawObjectPhong(sphereContext, modelMatrix, glm::vec3(1.0f));
+			}
+		}
+	}
+}
+
+
+
 void renderScene(GLFWwindow* window)
 {
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
@@ -245,12 +259,13 @@ void renderScene(GLFWwindow* window)
 		aquarium_color);
 
 
+	// Boids & Particles
 	for (Boid* b : boids) {
 		b->update(boids);
+		b->updateParticles(deltaTime);
 		drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
 	}
-
-	
+	renderParticles(boids);
 
 
 	//IMGUI WINDOWS:
@@ -381,6 +396,10 @@ void init(GLFWwindow* window)
 
 	for (int i = 0; i <= 40; i++) {
 		boids.push_back(new Boid(randomVec3()));
+	}
+
+	for (Boid* b : boids) {
+		b->initParticles();
 	}
 
 

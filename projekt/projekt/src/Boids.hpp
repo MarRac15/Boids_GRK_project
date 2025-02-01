@@ -23,13 +23,29 @@ int randomInt(int min, int max) {
 }
 
 
+struct Particle {
+	glm::vec3 position;
+	glm::vec3 velocity;
+	float lifetime;
+	float lifespan;
+};
+
+const int MAX_PARTICLES = 3;
+Particle particles[MAX_PARTICLES];
+
+
+
 class Boid {
 public:
 	glm::vec3 position;
 	glm::vec3 velocity;  // (szybkość + kierunek)
 	int groupId;
 
-	float maxSpeed = 0.04f;
+	static const int PARTICLES_COUNT = 3;
+	std::vector<Particle> particles;
+
+
+	float maxSpeed = 0.09f;
 	float maxForce = 0.2f;
 
 	float NEIGHBOUR_DISTANCE = 2.f;
@@ -58,7 +74,6 @@ public:
 		default: return glm::vec3(1.0f, 0.0f, 0.0f);
 		}
 	}
-
 
 
 	void applyBoundaryForce() {
@@ -197,6 +212,45 @@ public:
 		glm::mat4 modelMatrix = glm::translate(position) * rotationMatrix * yRotationMatrix * glm::scale(glm::vec3(0.7f));
 
 		return modelMatrix;
+	}
+
+
+
+	// particles
+
+	void initParticles() {
+		for (int i = 0; i < PARTICLES_COUNT; ++i) {
+			Particle p;
+			p.position = position;
+			p.velocity = glm::vec3(
+				(rand() % 100 - 50) / 500.0f,
+				(rand() % 100 - 50) / 500.0f,
+				(rand() % 100 - 50) / 500.0f
+			);
+			p.lifetime = 0.0f;
+			p.lifespan = (rand() % 100) / 100.0f * 2.0f + 1.0f;
+			particles.push_back(p);
+		}
+	}
+
+
+	void updateParticles(float deltaTime) {
+		for (auto& p : particles) {
+			if (p.lifetime < p.lifespan) {
+				p.position += p.velocity * deltaTime;
+				p.lifetime += deltaTime;
+			}
+			else {
+				p.position = position;
+				p.velocity = glm::vec3(
+					(rand() % 100 - 50) / 500.0f,
+					(rand() % 100 - 50) / 500.0f,
+					(rand() % 100 - 50) / 500.0f
+				);
+				p.lifetime = 0.0f;
+				p.lifespan = (rand() % 100) / 100.0f * 2.0f + 0.5f;
+			}
+		}
 	}
 
 };

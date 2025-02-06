@@ -218,7 +218,7 @@ void renderShadowmapPointLight() {
 	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
 
 
-	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
 	drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
 
@@ -267,6 +267,7 @@ void renderScene(GLFWwindow* window)
 		aquarium_color);
 
 	
+	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
 
 
 	//IMGUI WINDOWS:
@@ -285,10 +286,6 @@ void renderScene(GLFWwindow* window)
 	}
 
 
-	//tutaj tetsowo teren bez cieni
-	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2,0.2,0.2)), glm::vec3(0.8, 0.3, 0.3));
-
-	renderShadowmapPointLight();
 
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//glUseProgram(programTest);
@@ -430,6 +427,7 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
+	loadModelToContext("./models/mountain.obj", models::terrainContext);
 
 	loadModelToContext("./models/shark.obj", models::sharkContext);
 

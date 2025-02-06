@@ -32,6 +32,8 @@ namespace models {
 	Core::RenderContext sphereContext;
 	Core::RenderContext aquariumContext;
 	Core::RenderContext goldfishContext;
+	Core::RenderContext testContext;
+	Core::RenderContext terrainContext;
 }
 
 
@@ -68,8 +70,8 @@ float aspectRatio = 1.f;
 float exposition = 1.f;
 
 
-glm::vec3 pointlightPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
-glm::vec3 pointlightDir = glm::vec3(0., -0.9, 0.5);
+glm::vec3 pointlightPos = glm::vec3(5.f,5.f,-5.f);
+glm::vec3 pointlightDir = glm::vec3(0., -0.3, 0.5);
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
 glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
@@ -208,9 +210,13 @@ void renderShadowmapPointLight() {
 
 	glm::mat4 viewProjection = createLightViewProjection();
 
+	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
 
 
-	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+	drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
+
 
 	for (Boid* b : boids) {
 		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
@@ -234,20 +240,27 @@ void renderScene(GLFWwindow* window)
 	float time = glfwGetTime();
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
-	
-	renderShadowmapPointLight();
-
-
-	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		glm::vec3(1.f));
-
+	//drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+		//glm::vec3(1.f));
+	//drawObjectPhong(models::sphereContext, glm::translate(glm::vec3(0.f,2.f,0.f)), glm::vec3(1.f));
 
 	for (Boid* b : boids) {
 		b->update(boids);
 		drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
 	}
 
-	
+
+	//tutaj tetsowo teren bez cieni
+	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2,0.2,0.2)), glm::vec3(0.8, 0.3, 0.3));
+
+	renderShadowmapPointLight();
+
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glUseProgram(programTest);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
+	//Core::DrawContext(models::testContext);
+
 
 
 	//IMGUI WINDOWS:
@@ -346,9 +359,10 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/spaceship.obj", models::spaceshipContext);
 	loadModelToContext("./models/sphere.obj", models::sphereContext);
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
-
+	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
-
+	loadModelToContext("./models/mountain.obj", models::terrainContext);
+	
 	for (int i = 0; i <= 140; i++) {
 		boids.push_back(new Boid(randomVec3()));
 	}

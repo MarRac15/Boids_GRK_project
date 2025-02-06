@@ -32,6 +32,7 @@ namespace models {
 	Core::RenderContext sphereContext;
 	Core::RenderContext aquariumContext;
 	Core::RenderContext goldfishContext;
+	Core::RenderContext sharkContext;
 }
 
 
@@ -50,6 +51,7 @@ Core::Shader_Loader shaderLoader;
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext goldfishContext;
+Core::RenderContext sharkContext;
 
 glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
@@ -255,17 +257,10 @@ void renderScene(GLFWwindow* window)
 	renderShadowmapPointLight();
 
 
-	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
 		aquarium_color);
 
-
-	// Boids & Particles
-	for (Boid* b : boids) {
-		b->update(boids);
-		b->updateParticles(deltaTime);
-		drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
-	}
-	renderParticles(boids);
+	
 
 
 	//IMGUI WINDOWS:
@@ -299,9 +294,33 @@ void renderScene(GLFWwindow* window)
 		b->setCohesionWeight(newCohesionWeight);
 	}
 
+	//Shark ON/OFF:
+	static bool fleeEnabled = true;
+	ImGui::Checkbox("Shark", &fleeEnabled);
+	float newFleeWeight = fleeEnabled ? 3.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setFleeWeight(newFleeWeight);
+	}
+
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	// Boids & Particles
+	for (Boid* b : boids) {
+		b->update(boids);
+		b->updateParticles(deltaTime);
+		if (b->isShark) {
+			if (fleeEnabled) {
+				drawObjectPhong(models::sharkContext, b->getMatrix() * glm::scale(glm::vec3(0.4,0.4,0.3))*
+					glm::rotate(glm::radians(-180.0f), glm::vec3(0.0f, 1.0f, 0.0f)), b->getGroupColor());
+			}
+		}
+		else {
+			drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+		}
+	}
+	renderParticles(boids);
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -339,9 +358,9 @@ float randomFloat(float min, float max) {
 
 glm::vec3 randomVec3() {
 	return glm::vec3(
-		randomFloat(-4.6f, 4.6),
-		randomFloat(0.5f, 5.0f),
-		randomFloat(-1.6f, 1.6f)
+		randomFloat(-4.0f, 4.0),
+		randomFloat(1.f, 4.0f),
+		randomFloat(-1.0f, 1.0f)
 	);
 }
 
@@ -394,9 +413,17 @@ void init(GLFWwindow* window)
 
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 
-	for (int i = 0; i <= 40; i++) {
-		boids.push_back(new Boid(randomVec3()));
+	loadModelToContext("./models/shark.obj", models::sharkContext);
+
+	// fish --> red
+	for (int i = 0; i <= 4; i++) {
+		boids.push_back(new Boid(randomVec3(), false, 0));
+		boids.push_back(new Boid(randomVec3(), false, 1));
 	}
+
+
+	// shark
+	boids.push_back(new Boid(randomVec3(), true, 2));
 
 	for (Boid* b : boids) {
 		b->initParticles();

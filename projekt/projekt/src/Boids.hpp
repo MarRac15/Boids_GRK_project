@@ -7,7 +7,6 @@
 
 #include "Shader_Loader.h"
 #include "Render_Utils.h"
-//#include "Texture.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -40,12 +39,14 @@ public:
 	glm::vec3 position;
 	glm::vec3 velocity;  // (szybkość + kierunek)
 	int groupId;
+	bool isShark;
+	int attackGroup;
 
 	static const int PARTICLES_COUNT = 3;
 	std::vector<Particle> particles;
 
 
-	float maxSpeed = 0.09f;
+	float maxSpeed = 0.05f;
 	float maxForce = 0.2f;
 
 	float NEIGHBOUR_DISTANCE = 2.f;
@@ -54,23 +55,27 @@ public:
 	float ALIGMENT_WEIGHT = 1.0f;
 	float COHESION_WEIGHT = 0.001f;
 	float SEPARATION_WEIGHT = 2.0f;
+	float FLEE_WEIGHT = 3.0f;
 
-	float minX = -4.6f, maxX = 4.6f;
-	float minY = 0.5f, maxY = 5.0f;
+	float minX = -5.f, maxX = 7.0f;
+	float minY = 1.f, maxY = 6.0f;
 	float minZ = -1.6f, maxZ = 1.6f;
 
 
-	Boid(glm::vec3 startPosition) : position(startPosition) {
-		groupId = randomInt(0, 3);
+	Boid(glm::vec3 startPosition, bool isShark, int groupId) : position(startPosition), isShark(isShark) , groupId(groupId){
+		if (isShark == true)
+		{
+			attackGroup = randomInt(0, 1);
+		}
 		velocity = glm::vec3(0.01f);
 	}
 
+
 	glm::vec3 getGroupColor() {
 		switch (groupId) {
-		case 0: return glm::vec3(1.0f, 0.0f, 0.0f);  // grupa 1 --> czerwony
-		case 1: return glm::vec3(0.0f, 1.0f, 0.0f);  // grupa 2 --> zielony
-		case 2: return glm::vec3(0.0f, 0.0f, 1.0f);  // grupa 3 --> niebieski
-		case 3: return glm::vec3(1.0f, 1.0f, 0.0f);  // grupa 4 --> żółty
+		case 0: return glm::vec3(1.0f, 1.0f, 0.0f);  // grupa 2 --> żółty
+		case 1: return glm::vec3(1.0f, 0.0f, 0.0f);  // grupa 1 --> czerwony
+		case 2: return glm::vec3(0.5f, 0.5f, 0.5f);  // grupa 2 --> szary --> SHARK
 		default: return glm::vec3(1.0f, 0.0f, 0.0f);
 		}
 	}
@@ -78,7 +83,6 @@ public:
 
 	void applyBoundaryForce() {
 		glm::vec3 boundaryForce(0.0f);
-
 		if (position.x > maxX) {
 			boundaryForce.x = -maxForce;
 		}
@@ -102,6 +106,7 @@ public:
 		velocity += boundaryForce;
 	}
 
+
 	void setSeparationWeight(float weight)
 	{
 		SEPARATION_WEIGHT = weight;
@@ -115,6 +120,16 @@ public:
 	void setCohesionWeight(float weight)
 	{
 		COHESION_WEIGHT = weight;
+	}
+
+	void setFleeWeight(float weight)
+	{
+		FLEE_WEIGHT = weight;
+	}
+
+	bool getIsShark()
+	{
+		return isShark;
 	}
 
 	glm::vec3 separate(std::vector<Boid*>& boids) {
@@ -174,26 +189,75 @@ public:
 
 		if (count > 0) {
 			center_of_group = center_of_group / count;
-			return glm::normalize(center_of_group - position);
+			glm::vec3 direction = center_of_group - position;
+			if (glm::length(direction) > 0.0f) {
+				return glm::normalize(direction);
+			}
 		}
 		return glm::vec3(0.0f);
 	}
 
 
-	void update(std::vector<Boid*>& boids) {
-
-		glm::vec3 _separation = separate(boids) * SEPARATION_WEIGHT;
-		glm::vec3 _aligment = align(boids) * ALIGMENT_WEIGHT;
-		glm::vec3 _cohesion = cohesion(boids) * COHESION_WEIGHT;
-
-		glm::vec3 steering = _separation + _aligment + _cohesion;
-		velocity += steering;
-
-		if (glm::length(velocity) > maxSpeed) {
-			velocity = glm::normalize(velocity) * maxSpeed;
+	glm::vec3 sharkAttack(std::vector<Boid*>& boids) {
+		for (Boid* other_boid : boids) {
+			glm::vec3 direction = other_boid->position - position;
+			if (glm::length(direction) > 0.0f) {
+				glm::vec3 attackVector = glm::normalize(direction); 
+				return attackVector;
+			}
 		}
-		applyBoundaryForce();
+		return glm::vec3(0.0f);
+	}
+
+
+	glm::vec3 fleeFromShark(std::vector<Boid*>& boids) {
+		glm::vec3 escapeDirection(0.0f);
+		float maxFleeBoost = 5.0f;
+
+		for (Boid* other_boid : boids) {
+			if (other_boid->isShark) {
+				float distance = glm::distance(position, other_boid->position);
+				if (distance <= NEIGHBOUR_DISTANCE) {
+					escapeDirection += velocity * maxFleeBoost;
+				}
+			}
+		}
+		return escapeDirection;
+	}
+
+
+	void update(std::vector<Boid*>& boids) {
+		if (isShark) {
+			glm::vec3 _shark_Attack = sharkAttack(boids);
+			velocity = _shark_Attack * maxSpeed;
+
+			if (glm::length(velocity) > maxSpeed) {
+				velocity = glm::normalize(velocity) * maxSpeed;
+			}
+		}
+
+		else {
+			glm::vec3 _separation = separate(boids) * SEPARATION_WEIGHT;
+			glm::vec3 _aligment = align(boids) * ALIGMENT_WEIGHT;
+			glm::vec3 _cohesion = cohesion(boids) * COHESION_WEIGHT;
+			glm::vec3 _flee = fleeFromShark(boids) * FLEE_WEIGHT;
+
+			glm::vec3 steering = _separation + _aligment + _cohesion;
+
+			velocity += steering;
+			if (glm::length(velocity) > maxSpeed) {
+				velocity = glm::normalize(velocity) * maxSpeed;
+			}
+
+			velocity = velocity + _flee;
+			if (glm::length(velocity) > maxSpeed+0.1f) {
+				velocity = glm::normalize(velocity) * (maxSpeed+0.1f);
+			}
+		}
+
 		position += velocity;
+		applyBoundaryForce();
+		
 	}
 
 
@@ -208,6 +272,7 @@ public:
 		glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angle, rotationAxis);
 
 		glm::mat4 yRotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		//std::cout << "Pozycja boida: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 
 		glm::mat4 modelMatrix = glm::translate(position) * rotationMatrix * yRotationMatrix * glm::scale(glm::vec3(0.7f));
 

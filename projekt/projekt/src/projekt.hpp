@@ -34,6 +34,7 @@ namespace models {
 	Core::RenderContext goldfishContext;
 	Core::RenderContext testContext;
 	Core::RenderContext terrainContext;
+	Core::RenderContext sharkContext;
 }
 
 
@@ -52,6 +53,7 @@ Core::Shader_Loader shaderLoader;
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext goldfishContext;
+Core::RenderContext sharkContext;
 
 glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
@@ -84,6 +86,9 @@ std::vector<Boid*> boids;
 
 float lastTime = -1.f;
 float deltaTime = 0.f;
+
+// global variables needed for imgui:
+glm::vec3 aquarium_color = glm::vec3(1.0f);
 
 
 void updateDeltaTime(float time) {
@@ -227,6 +232,20 @@ void renderShadowmapPointLight() {
 }
 
 
+void renderParticles(const std::vector<Boid*>& boids) {
+	for (const auto& b : boids) {
+		for (const auto& p : b->particles) {
+			if (p.lifetime < p.lifespan) {
+				glm::mat4 modelMatrix = glm::translate(p.position);
+				modelMatrix = glm::scale(modelMatrix, glm::vec3(0.02f));
+				drawObjectPhong(sphereContext, modelMatrix, glm::vec3(1.0f));
+			}
+		}
+	}
+}
+
+
+
 void renderScene(GLFWwindow* window)
 {
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
@@ -240,13 +259,29 @@ void renderScene(GLFWwindow* window)
 	float time = glfwGetTime();
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
-	//drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		//glm::vec3(1.f));
-	//drawObjectPhong(models::sphereContext, glm::translate(glm::vec3(0.f,2.f,0.f)), glm::vec3(1.f));
+	
+	renderShadowmapPointLight();
 
+
+	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+		aquarium_color);
+
+	
+
+
+	//IMGUI WINDOWS:
+	ImGui::Begin("Main testing window");
+	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
+	ImGui::Text("Set aquarium color:");
+	ImGui::ColorEdit3("change color", (float*)&aquarium_color);
+	ImGui::Text("Enable or disable the rules:");
+
+	// Seperation ON/OFF:
+	static bool seperationEnabled = true;
+	ImGui::Checkbox("Seperation", &seperationEnabled);
+	float newSeparationWeight = seperationEnabled ? 2.0f : 0.0f;
 	for (Boid* b : boids) {
-		b->update(boids);
-		drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+		b->setSeparationWeight(newSeparationWeight);
 	}
 
 
@@ -261,15 +296,49 @@ void renderScene(GLFWwindow* window)
 	//glBindTexture(GL_TEXTURE_2D, depthMap);
 	//Core::DrawContext(models::testContext);
 
+	//Alignment ON/OFF:
+	static bool alignmentEnabled = true;
+	ImGui::Checkbox("Alignment", &alignmentEnabled);
+	float newAlignmentWeight = alignmentEnabled ? 1.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setAlignmentWeight(newAlignmentWeight);
+	}
 
+	//Cohesion ON/OFF:
+	static bool cohesionEnabled = true;
+	ImGui::Checkbox("Cohesion", &cohesionEnabled);
+	float newCohesionWeight = cohesionEnabled ? 0.001f : 0.0f;
+	for (Boid* b : boids) {
+		b->setCohesionWeight(newCohesionWeight);
+	}
 
-	//IMGUI WINDOWS:
-	ImGui::Begin("Main testing window");
-	ImGui::Text("Hello there!");
+	//Shark ON/OFF:
+	static bool fleeEnabled = true;
+	ImGui::Checkbox("Shark", &fleeEnabled);
+	float newFleeWeight = fleeEnabled ? 3.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setFleeWeight(newFleeWeight);
+	}
+
 	ImGui::End();
-
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+	// Boids & Particles
+	for (Boid* b : boids) {
+		b->update(boids);
+		b->updateParticles(deltaTime);
+		if (b->isShark) {
+			if (fleeEnabled) {
+				drawObjectPhong(models::sharkContext, b->getMatrix() * glm::scale(glm::vec3(0.4,0.4,0.3))*
+					glm::rotate(glm::radians(-180.0f), glm::vec3(0.0f, 1.0f, 0.0f)), b->getGroupColor());
+			}
+		}
+		else {
+			drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+		}
+	}
+	renderParticles(boids);
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -307,9 +376,9 @@ float randomFloat(float min, float max) {
 
 glm::vec3 randomVec3() {
 	return glm::vec3(
-		randomFloat(-4.6f, 4.6),
-		randomFloat(0.5f, 5.0f),
-		randomFloat(-1.6f, 1.6f)
+		randomFloat(-4.0f, 4.0),
+		randomFloat(1.f, 4.0f),
+		randomFloat(-1.0f, 1.0f)
 	);
 }
 
@@ -361,10 +430,21 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
-	loadModelToContext("./models/mountain.obj", models::terrainContext);
-	
-	for (int i = 0; i <= 140; i++) {
-		boids.push_back(new Boid(randomVec3()));
+
+	loadModelToContext("./models/shark.obj", models::sharkContext);
+
+	// fish --> red
+	for (int i = 0; i <= 4; i++) {
+		boids.push_back(new Boid(randomVec3(), false, 0));
+		boids.push_back(new Boid(randomVec3(), false, 1));
+	}
+
+
+	// shark
+	boids.push_back(new Boid(randomVec3(), true, 2));
+
+	for (Boid* b : boids) {
+		b->initParticles();
 	}
 
 

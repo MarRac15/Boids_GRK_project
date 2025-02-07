@@ -18,6 +18,7 @@
 #include <assimp/postprocess.h>
 #include <string>
 #include "Boids.hpp"
+#include "TerrainClass.cpp"
 
 #include <cstdlib>
 #include <ctime> 
@@ -37,6 +38,10 @@ namespace models {
 	Core::RenderContext sharkContext;
 }
 
+//GLuint terrainVAO, terrainVBO, terrainEBO;
+Terrain terrain;
+unsigned int NUM_STRIPS;
+unsigned int NUM_VERTS_PER_STRIP;
 
 
 GLuint depthMapFBO;
@@ -145,6 +150,9 @@ glm::mat4 createLightViewProjection() {
 	glm::mat4 projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.f, 50.f);
 	return projection * view;
 }
+
+
+
 void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
 	glUseProgram(programPhSh);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -218,9 +226,9 @@ void renderShadowmapPointLight() {
 	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
 
 
-	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-	drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
+	//drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
 
 
 	for (Boid* b : boids) {
@@ -244,7 +252,25 @@ void renderParticles(const std::vector<Boid*>& boids) {
 	}
 }
 
+void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
+	glUseProgram(programPhSh);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programPhSh, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	//glUniform3f(glGetUniformLocation(programPhSh, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
+	glm::mat4 lightVP = createLightViewProjection();
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	terrain.drawTerrain();
+
+}
 
 void renderScene(GLFWwindow* window)
 {
@@ -263,13 +289,12 @@ void renderScene(GLFWwindow* window)
 	renderShadowmapPointLight();
 
 
-	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		aquarium_color);
+	//drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
+	//	aquarium_color);
 
 	
-	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
-
-
+	//drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
+	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::translate(glm::vec3(0.f,5.f,0.f)));
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
@@ -399,7 +424,6 @@ void initDepthMap() {
 
 }
 
-
 void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -418,6 +442,7 @@ void init(GLFWwindow* window)
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 
 	initDepthMap();
+	terrain.createTerrain();
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

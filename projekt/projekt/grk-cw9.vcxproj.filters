@@ -143,6 +143,9 @@
     <ClInclude Include="src\ImGUI\imstb_truetype.h">
       <Filter>Source Files\ImGUI</Filter>
     </ClInclude>
+    <ClInclude Include="src\TerrainClass.cpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader_8_sun.frag">

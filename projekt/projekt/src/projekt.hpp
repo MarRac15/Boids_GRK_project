@@ -32,6 +32,8 @@ namespace models {
 	Core::RenderContext sphereContext;
 	Core::RenderContext aquariumContext;
 	Core::RenderContext goldfishContext;
+	Core::RenderContext testContext;
+	Core::RenderContext terrainContext;
 	Core::RenderContext sharkContext;
 }
 
@@ -76,8 +78,8 @@ float aspectRatio = 1.f;
 float exposition = 1.f;
 
 
-glm::vec3 pointlightPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
-glm::vec3 pointlightDir = glm::vec3(0., -0.9, 0.5);
+glm::vec3 pointlightPos = glm::vec3(5.f,5.f,-5.f);
+glm::vec3 pointlightDir = glm::vec3(0., -0.3, 0.5);
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
 glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
@@ -219,9 +221,13 @@ void renderShadowmapPointLight() {
 
 	glm::mat4 viewProjection = createLightViewProjection();
 
+	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
 
 
 	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+
+	drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
+
 
 	for (Boid* b : boids) {
 		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
@@ -267,6 +273,7 @@ void renderScene(GLFWwindow* window)
 		aquarium_color);
 
 	
+	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
 
 
 	//IMGUI WINDOWS:
@@ -283,6 +290,14 @@ void renderScene(GLFWwindow* window)
 	for (Boid* b : boids) {
 		b->setSeparationWeight(newSeparationWeight);
 	}
+
+
+
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glUseProgram(programTest);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
+	//Core::DrawContext(models::testContext);
 
 	//Alignment ON/OFF:
 	static bool alignmentEnabled = true;
@@ -417,8 +432,9 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/spaceship.obj", models::spaceshipContext);
 	loadModelToContext("./models/sphere.obj", models::sphereContext);
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
-
+	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
+	loadModelToContext("./models/mountain.obj", models::terrainContext);
 
 	loadModelToContext("./models/shark.obj", models::sharkContext);
 

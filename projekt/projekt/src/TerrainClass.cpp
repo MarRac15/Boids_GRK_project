@@ -48,7 +48,7 @@ public:
 
 		float scaleY = 5.0f / 256.0f;
 		//znormalizowanie do 0,1 oraz wysokosc jaka chce ortzymac czyli 20
-		float shiftY = 6.f;
+		float shiftY = 0.f;
 
 		float scalePixel = 0.5f;
 

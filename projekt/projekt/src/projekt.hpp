@@ -34,11 +34,10 @@ namespace models {
 	Core::RenderContext aquariumContext;
 	Core::RenderContext goldfishContext;
 	Core::RenderContext testContext;
-	Core::RenderContext terrainContext;
 	Core::RenderContext sharkContext;
 }
 
-//GLuint terrainVAO, terrainVBO, terrainEBO;
+
 Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
@@ -228,9 +227,6 @@ void renderShadowmapPointLight() {
 
 	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-	//drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
-
-
 	for (Boid* b : boids) {
 		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
 
@@ -286,15 +282,13 @@ void renderScene(GLFWwindow* window)
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
 	
-	renderShadowmapPointLight();
+	//renderShadowmapPointLight();
 
 
 	//drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
 	//	aquarium_color);
 
-	
-	//drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
-	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::translate(glm::vec3(0.f,5.f,0.f)));
+	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
@@ -452,8 +446,7 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
-	loadModelToContext("./models/mountain.obj", models::terrainContext);
-
+	
 	loadModelToContext("./models/shark.obj", models::sharkContext);
 
 	// fish --> red

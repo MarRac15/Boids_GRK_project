@@ -10,7 +10,7 @@
 
 #include "Shader_Loader.h"
 #include "Render_Utils.h"
-//#include "Texture.h"
+#include "Texture.h"
 
 #include "Box.cpp"
 #include <assimp/Importer.hpp>
@@ -35,6 +35,11 @@ namespace models {
 	Core::RenderContext sharkContext;
 }
 
+namespace texture {
+	GLuint ship;
+	GLuint shipNormal;
+}
+
 
 
 GLuint depthMapFBO;
@@ -45,6 +50,7 @@ GLuint programPBR;
 GLuint programPhSh;
 GLuint programTest;
 GLuint programDepth;
+GLuint programTex;
 
 Core::Shader_Loader shaderLoader;
 
@@ -151,7 +157,7 @@ void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
 	glUniform3f(glGetUniformLocation(programPhSh, "color"), color.x, color.y, color.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-	//glUniform3f(glGetUniformLocation(programPhSh, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
@@ -401,6 +407,7 @@ void init(GLFWwindow* window)
 	programPBR = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
 	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
+	//programTex = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
 
 	initDepthMap();
 
@@ -414,6 +421,8 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 
 	loadModelToContext("./models/shark.obj", models::sharkContext);
+
+	texture::shipNormal = Core::LoadTexture("./textures/");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

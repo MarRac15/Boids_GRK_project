@@ -51,6 +51,7 @@
     <ClInclude Include="src\SOIL\stbi_DDS_aug.h" />
     <ClInclude Include="src\SOIL\stbi_DDS_aug_c.h" />
     <ClInclude Include="src\SOIL\stb_image_aug.h" />
+    <ClInclude Include="src\TerrainClass.cpp" />
     <ClInclude Include="src\Texture.h" />
   </ItemGroup>
   <ItemGroup>

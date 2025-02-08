@@ -18,6 +18,7 @@
 #include <assimp/postprocess.h>
 #include <string>
 #include "Boids.hpp"
+#include "TerrainClass.cpp"
 
 #include <cstdlib>
 #include <ctime> 
@@ -33,7 +34,6 @@ namespace models {
 	Core::RenderContext aquariumContext;
 	Core::RenderContext goldfishContext;
 	Core::RenderContext testContext;
-	Core::RenderContext terrainContext;
 	Core::RenderContext sharkContext;
 }
 
@@ -47,6 +47,10 @@ namespace texture {
 	GLuint brickwall_normal;
 }
 
+
+Terrain terrain;
+unsigned int NUM_STRIPS;
+unsigned int NUM_VERTS_PER_STRIP;
 
 
 GLuint depthMapFBO;
@@ -208,29 +212,6 @@ void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLui
 	Core::DrawContext(context);
 }
 
-
-void drawObjectTexture2(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureId) {
-	glUseProgram(programTex);
-	Core::SetActiveTexture(textureId, "colorTexture", 0, 0);
-	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
-	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(programTex, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniformMatrix4fv(glGetUniformLocation(programTex, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniform3f(glGetUniformLocation(programTex, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-	glUniform3f(glGetUniformLocation(programTex, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
-	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
-	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
-
-	//glm::mat4 lightVP = createLightViewProjection();
-	//glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-
-
-
-	Core::DrawContext(context);
-}
-
 void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, float roughness, float metallic) {
 
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -282,10 +263,7 @@ void renderShadowmapPointLight() {
 	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
 
 
-	drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-
-	drawObjectDepth(models::terrainContext, viewProjection,glm::scale(glm::vec3(0.2, 0.2, 0.2)));
-
+	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
 	for (Boid* b : boids) {
 		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
@@ -308,7 +286,25 @@ void renderParticles(const std::vector<Boid*>& boids) {
 	}
 }
 
+void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
+	glUseProgram(programPhSh);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programPhSh, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	//glUniform3f(glGetUniformLocation(programPhSh, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
+	glm::mat4 lightVP = createLightViewProjection();
+	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	terrain.drawTerrain();
+
+}
 
 void renderScene(GLFWwindow* window)
 {
@@ -324,13 +320,14 @@ void renderScene(GLFWwindow* window)
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
 	
-	renderShadowmapPointLight();
+	//renderShadowmapPointLight();
 
 
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
 	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
 	//drawObjectTexture2(models::sphereContext, glm::mat4()  * glm::scale(glm::vec3(1.0)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(glm::vec3(2.0, 0.0, 0.0)), 3);
 
+	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
@@ -461,7 +458,6 @@ void initDepthMap() {
 
 }
 
-
 void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -482,6 +478,7 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
+	terrain.createTerrain();
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

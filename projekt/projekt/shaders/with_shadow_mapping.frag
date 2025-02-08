@@ -10,6 +10,7 @@ uniform vec3 cameraPos;
 
 uniform sampler2D depthMap;
 uniform sampler2D colorTexture;
+uniform sampler2D normalSampler;
 
 //in vec3 vNormal;
 in vec3 vPosition;
@@ -63,8 +64,7 @@ void main()
 	float shadow = (1.0-calculateShadow(sunSpacePos));
 
 	//float distance = length(vPosition - lightPos);
-	vec4 textureColor = texture2D(colorTexture, texCoord);
 	vec3 fragColor = lightColor* (color * min(1,AMBIENT+shadow*(intensityDiffuse +intensitySpecular)));
-	outColor = fragColor * vec4(textureColor.r, textureColor.g, textureColor.b, 1.0);
+	outColor = vec4(fragColor,1.0);
 	
 }

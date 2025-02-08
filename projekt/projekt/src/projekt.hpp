@@ -39,7 +39,12 @@ namespace models {
 
 namespace texture {
 	GLuint ship;
+	GLuint fish;
+	GLuint brickwall;
+	GLuint blueTest;
 	GLuint shipNormal;
+	GLuint fishNormal;
+	GLuint brickwall_normal;
 }
 
 
@@ -151,6 +156,9 @@ glm::mat4 createLightViewProjection() {
 	glm::mat4 projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.f, 50.f);
 	return projection * view;
 }
+
+
+
 void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
 	glUseProgram(programPhSh);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -167,6 +175,56 @@ void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
+
+
+
+	Core::DrawContext(context);
+}
+
+
+
+void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureId, GLuint normalId) {
+	glUseProgram(programTex);
+	
+	Core::SetActiveTexture(textureId, "colorTexture", 0, 0);
+	Core::SetActiveTexture(normalId, "normalSampler", 1, 1);
+	
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programTex, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programTex, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
+
+	//glm::mat4 lightVP = createLightViewProjection();
+	//glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
+
+
+
+	Core::DrawContext(context);
+}
+
+
+void drawObjectTexture2(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureId) {
+	glUseProgram(programTex);
+	Core::SetActiveTexture(textureId, "colorTexture", 0, 0);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programTex, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programTex, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programTex, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
+
+	//glm::mat4 lightVP = createLightViewProjection();
+	//glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
 
 
 
@@ -269,12 +327,9 @@ void renderScene(GLFWwindow* window)
 	renderShadowmapPointLight();
 
 
-	drawObjectPhong(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-		aquarium_color);
-
-	
-	drawObjectPhong(models::terrainContext, glm::scale(glm::vec3(0.2, 0.2, 0.2)), glm::vec3(0.8, 0.3, 0.3));
-
+	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
+	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
+	//drawObjectTexture2(models::sphereContext, glm::mat4()  * glm::scale(glm::vec3(1.0)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(glm::vec3(2.0, 0.0, 0.0)), 3);
 
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
@@ -338,7 +393,8 @@ void renderScene(GLFWwindow* window)
 			}
 		}
 		else {
-			drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+			//drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
 		}
 	}
 	renderParticles(boids);
@@ -422,7 +478,8 @@ void init(GLFWwindow* window)
 	programPBR = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
 	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
-	//programTex = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
+	programTex = shaderLoader.CreateProgram("shaders/with_textures.vert", "shaders/with_textures.frag");
+	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
 
@@ -434,11 +491,16 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
-	loadModelToContext("./models/mountain.obj", models::terrainContext);
 
 	loadModelToContext("./models/shark.obj", models::sharkContext);
 
-	texture::shipNormal = Core::LoadTexture("./textures/");
+	texture::ship = Core::LoadTexture("./textures/spaceship.jpg");
+	texture::fish = Core::LoadTexture("./textures/Stylized_Scales_003_basecolor.png");
+	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
+	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
+	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
+	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
+	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

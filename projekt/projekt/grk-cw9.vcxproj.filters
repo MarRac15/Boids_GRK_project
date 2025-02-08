@@ -175,5 +175,17 @@
     <None Include="shaders\with_shadow_mapping.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\with_textures.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\with_textures.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\normal_test.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\normal_test.vert">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

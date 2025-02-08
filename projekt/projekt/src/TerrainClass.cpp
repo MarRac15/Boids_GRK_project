@@ -54,6 +54,8 @@ public:
 
 		unsigned char* data = loadHeightMap();
 		//close soil image?
+		
+		//std::vector<float> verticesNormals;
 
 		std::vector<float> vertices;
 		for (unsigned int i = 0;i < height;i++) {
@@ -65,16 +67,47 @@ public:
 				vertices.push_back(scalePixel*( - height / 2.0f + i));	//vertices v.x
 				vertices.push_back((int)y * scaleY - shiftY); // v.y
 				vertices.push_back(scalePixel*( - width / 2.0f + j));       //v.z
+				//DODANIE NORMALNYCH WEKTOROW
+				//x y z wartosci normalnej
+				vertices.push_back(0.f);	//x normalnej
+				vertices.push_back(0.f);	//y normalnej
+				vertices.push_back(0.f);	//z normalnej 
+				//DLA TESTU DALAM 0.5 dla kazdej
 			}
 		}
 		std::vector<unsigned int> indices;
 
-		for (unsigned int i = 0;i < height - 1; i++) {
+		for (unsigned int i = 0;i < height - 1; i++) {//tu sa tworzone indeksy czyli tu przy trojkatach mozna obliczac normalne
 			for (unsigned int j = 0; j < width; j++) {
 				for (unsigned int k = 0; k < 2;k++) {
-					indices.push_back(j + width * (i + k));
+					indices.push_back(j + width * (i + k));//??? czy tak?
+					//czy powinno byc *3 skoro mam dodatkowe 3 atrybuty 
+					
 				}
 			}
+		}
+		for (unsigned int i = 0;i < indices.size();i = i + 3) {
+			unsigned int index0 = indices[i]*6;
+			unsigned int index1 = indices[i + 1]*6;
+			unsigned int index2 = indices[i + 2]*6;	//bo wierzcholek ma 6 atrybutow
+			//teraz dostalismy indeksy wierzcholkow trojkata
+			//wierzcholki
+			glm::vec3 vertice0 = glm::vec3(vertices[index0],vertices[index0+1],vertices[index0+2]);
+			glm::vec3 vertice1 = glm::vec3(vertices[index1],vertices[index1+1],vertices[index1+2]);
+			glm::vec3 vertice2 = glm::vec3(vertices[index2],vertices[index2+1],vertices[index2+2]);
+
+			glm::vec3 normal = glm::cross(vertice0 - vertice1, vertice2 - vertice1);
+			vertices[index0 + 3] += normal.x;
+			vertices[index0 + 4] += normal.y;
+			vertices[index0 + 5] += normal.z;
+			vertices[index1 + 3] += normal.x;
+			vertices[index1 + 4] += normal.y;
+			vertices[index1 + 5] += normal.z;
+			vertices[index2 + 3] += normal.x;
+			vertices[index2 + 4] += normal.y;
+			vertices[index2 + 5] += normal.z;
+
+			
 		}
 		SOIL_free_image_data(data);
 
@@ -88,8 +121,11 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3 * sizeof(float)));
+
 
 		glGenBuffers(1, &terrainEBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, terrainEBO);

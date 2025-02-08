@@ -26,6 +26,7 @@
 
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
+//window:
 int WIDTH = 500, HEIGHT = 500;
 
 namespace models {
@@ -35,11 +36,13 @@ namespace models {
 	Core::RenderContext goldfishContext;
 	Core::RenderContext testContext;
 	Core::RenderContext sharkContext;
+	Core::RenderContext leaderContext;
 }
 
 namespace texture {
 	GLuint ship;
 	GLuint fish;
+	GLuint leaderFish;
 	GLuint brickwall;
 	GLuint blueTest;
 	GLuint shipNormal;
@@ -56,7 +59,7 @@ unsigned int NUM_VERTS_PER_STRIP;
 GLuint depthMapFBO;
 GLuint depthMap;
 
-
+//shader programs:
 GLuint programPBR;
 GLuint programPhSh;
 GLuint programTest;
@@ -70,22 +73,30 @@ Core::RenderContext sphereContext;
 Core::RenderContext goldfishContext;
 Core::RenderContext sharkContext;
 
-glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
-glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
-glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f) * 0.5;
-
+//for camera:
 glm::vec3 cameraPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
 glm::vec3 cameraDir = glm::vec3(-0.354510f, 0.000000f, 0.935054f);
-
-
 glm::vec3 spaceshipPos = glm::vec3(0.065808f, 1.250000f, -2.189549f);
 glm::vec3 spaceshipDir = glm::vec3(-0.490263f, 0.000000f, 0.871578f);
+
+//for mouse movement:
+float yaw = -90.0f;
+float pitch = 0.0f;
+float lastMouseX = WIDTH/2.0;
+float lastMouseY = HEIGHT/2.0;
+bool firstMouse = true;
+
+
 GLuint VAO, VBO;
 
 float aspectRatio = 1.f;
 
 float exposition = 1.f;
 
+//lighting variables:
+glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
+glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
+glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f) * 0.5;
 
 glm::vec3 pointlightPos = glm::vec3(5.f,5.f,-5.f);
 glm::vec3 pointlightDir = glm::vec3(0., -0.3, 0.5);
@@ -325,9 +336,10 @@ void renderScene(GLFWwindow* window)
 
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
 	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
-	//drawObjectTexture2(models::sphereContext, glm::mat4()  * glm::scale(glm::vec3(1.0)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(glm::vec3(2.0, 0.0, 0.0)), 3);
+	
 
-	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
+	//drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
+	
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
@@ -375,6 +387,14 @@ void renderScene(GLFWwindow* window)
 		b->setFleeWeight(newFleeWeight);
 	}
 
+	//Leader ON/OFF:
+	static bool followEnabled = false;
+	ImGui::Checkbox("Leader", &followEnabled);
+	float newFollowWeight = followEnabled ? 3.0f : 0.0f;
+	for (Boid* b : boids) {
+		b->setFollowWeight(newFollowWeight);
+	}
+
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -383,6 +403,12 @@ void renderScene(GLFWwindow* window)
 	for (Boid* b : boids) {
 		b->update(boids);
 		b->updateParticles(deltaTime);
+
+		if (b->isLeader) {
+			if (followEnabled) {
+				drawObjectTexture(models::leaderContext, b->getMatrix()*glm::scale(glm::vec3(0.01)), texture::leaderFish, texture::fishNormal);
+			}
+		}
 		if (b->isShark) {
 			if (fleeEnabled) {
 				drawObjectPhong(models::sharkContext, b->getMatrix() * glm::scale(glm::vec3(0.4,0.4,0.3))*
@@ -408,6 +434,60 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	WIDTH = width;
 	HEIGHT = height;
 }
+
+
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) 
+{
+	float xOffset = xpos - lastMouseX;
+	float yOffset = lastMouseY - ypos; //bc y-coordinates range from bottom to top
+	lastMouseX = xpos;
+	lastMouseY = ypos;
+
+	const float sensitivity = 0.1f;
+	xOffset *= sensitivity;
+	yOffset *= sensitivity;
+
+	yaw += xOffset;
+	pitch += yOffset;
+
+	//constrains so camera doesnt flip or some other weird stuff happens:
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 direction;
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	spaceshipDir = glm::normalize(direction);
+
+
+	//preventing sudden camera jump when you open the window:
+	if (firstMouse)
+	{
+		lastMouseX = xpos;
+		lastMouseY = ypos;
+		firstMouse = false;
+	}
+}
+
+
+//void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+//{
+//
+//	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) //action to albo press albo release
+//	{
+//		double xpos, ypos;
+//		glfwGetCursorPos(window, &xpos, &ypos);
+//		printf("%f,%f\n", xpos, ypos);
+//		xpos = (2 * xpos / width) - 1;
+//		ypos = -(2 * ypos / height - 1);
+//
+//
+//	}
+//}
 
 
 void loadModelToContext(std::string path, Core::RenderContext& context)
@@ -462,9 +542,21 @@ void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+	//fullscreen - WILL FORCE TO GO INTO FULLSCREEN:
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+	glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+
+	//input:
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	//ImGUI initialization:
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	/*ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	}*/
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
@@ -488,11 +580,13 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/aquarium.obj", models::aquariumContext);
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
+	loadModelToContext("./models/golden_fish.obj", models::leaderContext);
 
 	loadModelToContext("./models/shark.obj", models::sharkContext);
 
 	texture::ship = Core::LoadTexture("./textures/spaceship.jpg");
 	texture::fish = Core::LoadTexture("./textures/Stylized_Scales_003_basecolor.png");
+	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
@@ -501,13 +595,16 @@ void init(GLFWwindow* window)
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {
-		boids.push_back(new Boid(randomVec3(), false, 0));
-		boids.push_back(new Boid(randomVec3(), false, 1));
+		boids.push_back(new Boid(randomVec3(), false, 0, false));
+		boids.push_back(new Boid(randomVec3(), false, 1, false));
 	}
 
 
 	// shark
-	boids.push_back(new Boid(randomVec3(), true, 2));
+	boids.push_back(new Boid(randomVec3(), true, 2, false));
+
+	//leader fish:
+	boids.push_back(new Boid(randomVec3(), false, 3, true));
 
 	for (Boid* b : boids) {
 		b->initParticles();

@@ -85,6 +85,7 @@ float pitch = 0.0f;
 float lastMouseX = WIDTH/2.0;
 float lastMouseY = HEIGHT/2.0;
 bool firstMouse = true;
+bool leftMousePressed = false;
 
 
 GLuint VAO, VBO;
@@ -114,7 +115,11 @@ float lastTime = -1.f;
 float deltaTime = 0.f;
 
 // global variables needed for imgui:
+bool isMouseCaptured = false;
+bool cursorDisabled = true;
+bool iKeyPressedLastFrame = false;
 glm::vec3 aquarium_color = glm::vec3(1.0f);
+
 
 
 void updateDeltaTime(float time) {
@@ -319,9 +324,11 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 
 void renderScene(GLFWwindow* window)
 {
+
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	ImGuiIO& io = ImGui::GetIO();
 	//ImGUI new frame:
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -341,7 +348,8 @@ void renderScene(GLFWwindow* window)
 	//drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	
 	//IMGUI WINDOWS:
-	ImGui::Begin("Main testing window");
+	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
 	ImGui::Text("Set aquarium color:");
 	ImGui::ColorEdit3("change color", (float*)&aquarium_color);
@@ -439,31 +447,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) 
 {
-	float xOffset = xpos - lastMouseX;
-	float yOffset = lastMouseY - ypos; //bc y-coordinates range from bottom to top
-	lastMouseX = xpos;
-	lastMouseY = ypos;
-
-	const float sensitivity = 0.1f;
-	xOffset *= sensitivity;
-	yOffset *= sensitivity;
-
-	yaw += xOffset;
-	pitch += yOffset;
-
-	//constrains so camera doesnt flip or some other weird stuff happens:
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	spaceshipDir = glm::normalize(direction);
-
-
+	if (!cursorDisabled)
+	{
+		return;
+	}
 	//preventing sudden camera jump when you open the window:
 	if (firstMouse)
 	{
@@ -471,23 +458,54 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 		lastMouseY = ypos;
 		firstMouse = false;
 	}
+
+		float xOffset = xpos - lastMouseX;
+		float yOffset = lastMouseY - ypos; //bc y-coordinates range from bottom to top
+		lastMouseX = xpos;
+		lastMouseY = ypos;
+
+		const float sensitivity = 0.1f;
+		xOffset *= sensitivity;
+		yOffset *= sensitivity;
+
+		yaw += xOffset;
+		pitch += yOffset;
+
+		//constrains so camera doesnt flip or some other weird stuff happens:
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+
+		glm::vec3 direction;
+		direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+		direction.y = sin(glm::radians(pitch));
+		direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+		spaceshipDir = glm::normalize(direction);
+
 }
 
-
-//void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+//void cursor_position_callback(GLFWwindow* window, double xPos, double yPos)
 //{
-//
-//	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) //action to albo press albo release
-//	{
-//		double xpos, ypos;
-//		glfwGetCursorPos(window, &xpos, &ypos);
-//		printf("%f,%f\n", xpos, ypos);
-//		xpos = (2 * xpos / width) - 1;
-//		ypos = -(2 * ypos / height - 1);
-//
-//
-//	}
+//	lastMouseX = xPos;
+//	lastMouseY = yPos;
 //}
+
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+	{
+		if (action == GLFW_PRESS) {
+			leftMousePressed = true;
+		}
+		else if (action == GLFW_RELEASE) {
+			leftMousePressed = false;
+		}
+	}
+
+}
 
 
 void loadModelToContext(std::string path, Core::RenderContext& context)
@@ -553,10 +571,10 @@ void init(GLFWwindow* window)
 
 	//ImGUI initialization:
 	ImGui::CreateContext();
-	/*ImGuiIO& io = ImGui::GetIO();
-	if (!io.WantCaptureMouse) {
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	}*/
+	ImGuiIO& io = ImGui::GetIO();
+	//if (!io.WantCaptureMouse) {
+	//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	//}
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
@@ -657,6 +675,22 @@ void processInput(GLFWwindow* window)
 		printf("spaceshipPos = glm::vec3(%ff, %ff, %ff);\n", spaceshipPos.x, spaceshipPos.y, spaceshipPos.z);
 		printf("spaceshipDir = glm::vec3(%ff, %ff, %ff);\n", spaceshipDir.x, spaceshipDir.y, spaceshipDir.z);
 	}
+
+	bool iKeyPressedNow = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
+	if (iKeyPressedNow && !iKeyPressedLastFrame)
+	{
+		cursorDisabled = !cursorDisabled;
+		if (cursorDisabled)
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+		else {
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+			glfwSetCursorPos(window, lastMouseX, lastMouseY);
+		}
+	}
+		iKeyPressedLastFrame = iKeyPressedNow;
 
 
 }

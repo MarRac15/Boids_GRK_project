@@ -93,6 +93,7 @@ float lastMouseX = WIDTH/2.0;
 float lastMouseY = HEIGHT/2.0;
 bool firstMouse = true;
 bool leftMousePressed = false;
+bool rightMousePressed = false;
 
 
 //lighting variables:
@@ -233,6 +234,42 @@ void applyTargetingForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat
 	for (Boid* boid : boids)
 	{
 		glm::vec3 direction = worldMousePos - boid->position;
+		float distance = glm::length(direction);
+
+		if (distance > 0.01f)
+		{
+			direction = glm::normalize(direction);
+			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += direction * forceStrength;
+		}
+	}
+
+}
+
+void applyRepulsionForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight) {
+
+	if (!rightMousePressed) return; //callback changes this to true when you click on the screen
+
+	if (ImGui::GetIO().WantCaptureMouse)
+	{
+		return;
+	}
+
+	double mouseX, mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+
+	//convert mouse click to world space:
+	std::pair<glm::vec3, glm::vec3> result = screenToWorld(mouseX, mouseY, viewMatrix, projectionMatrix, screenWidth, screenHeight);
+	glm::vec3 rayOrigin = result.first;
+	glm::vec3 rayDirection = result.second;
+
+	float targetDepth = 0.2f;
+	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
+	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
+
+	for (Boid* boid : boids)
+	{
+		glm::vec3 direction = boid->position - worldMousePos;
 		float distance = glm::length(direction);
 
 		if (distance > 0.01f)
@@ -420,13 +457,22 @@ void renderScene(GLFWwindow* window) {
 
 	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	
+
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
-	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 	ImGui::Text("Set aquarium color:");
 	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
+
+
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glUseProgram(programTest);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
+	//Core::DrawContext(models::testContext);
+
 
 	// Seperation ON/OFF:
 	static bool seperationEnabled = true;
@@ -436,13 +482,6 @@ void renderScene(GLFWwindow* window) {
 		b->setSeparationWeight(newSeparationWeight);
 	}
 
-
-
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glUseProgram(programTest);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-	//Core::DrawContext(models::testContext);
 
 	//Alignment ON/OFF:
 	static bool alignmentEnabled = true;
@@ -477,8 +516,10 @@ void renderScene(GLFWwindow* window) {
 	//taregt force:
 	glm::mat4 viewMatrix = createCameraMatrix();
 	glm::mat4 projectionMatrix = createPerspectiveMatrix();
-	
 	applyTargetingForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
+
+	//repulsion force:
+	applyRepulsionForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
 
 
 	// Boids & Particles
@@ -569,6 +610,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		}
 		else if (action == GLFW_RELEASE) {
 			leftMousePressed = false;
+		}
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_RIGHT)
+	{
+		if (action == GLFW_PRESS) {
+			rightMousePressed = true;
+		}
+		else if (action == GLFW_RELEASE) {
+			rightMousePressed = false;
 		}
 	}
 

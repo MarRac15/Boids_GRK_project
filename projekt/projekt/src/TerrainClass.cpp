@@ -16,43 +16,43 @@
 #include <cstdlib>
 #include <ctime> 
 #include <vector>
-
+# include <random>
 
 #include "SOIL/SOIL.h"
 
 class Terrain {
 
-	float heightScale;
+
 	unsigned int NUM_OF_STRIPS;
 	unsigned int NUM_VER_PER_STRIP;
 
 	//GenerateHeightmap GenerateHeightmap();
 	GLuint terrainVAO, terrainVBO, terrainEBO;
 public:
-	Terrain(float scaleHeightTo){ 
+	Terrain(){ 
 		NUM_OF_STRIPS = 0;NUM_VER_PER_STRIP = 0;
-		heightScale = scaleHeightTo;
+
 	}
 
-	float random(glm::vec2 st) {
+	float random(glm::vec2 st,float random1, float random2, float random3) {
 		return glm::fract(
 			sin(
 				glm::dot(
 					st,
-					glm::vec2(15.27802, 18.120)
+					glm::vec2(random1, random2)
 				)
-				* 43678.8)
+				* random3)
 		);
 	}
 
-	float noise(glm::vec2 pos) {
+	float noise(glm::vec2 pos,float random1, float random2, float random3) {
 		glm::vec2 i = floor(pos);
 		glm::vec2 f = fract(pos);
 
-		float a = random(i);
-		float b = random(i + glm::vec2(1.0, 0.0));
-		float c = random(i + glm::vec2(0.0, 1.0));
-		float d = random(i + glm::vec2(1.0, 1.0));
+		float a = random(i,random1,random2, random3);
+		float b = random(i + glm::vec2(1.0, 0.0), random1, random2, random3);
+		float c = random(i + glm::vec2(0.0, 1.0), random1, random2, random3);
+		float d = random(i + glm::vec2(1.0, 1.0), random1, random2, random3);
 
 		//cubic curve for smoothstep interpolation
 		glm::vec2 u = f * f * (3.0f - 2.0f * f);
@@ -62,25 +62,23 @@ public:
 			(d - b) * u.x * u.y;
 	}
 	
-	float calculateYFromNoise(glm::vec2 pos,int width,int height) {
+	float calculateYFromNoise(glm::vec2 pos,int width,int height,float random1, float random2, float random3) {
 
 			glm::vec2 resolution = glm::vec2((float)width, (float)height);
 			//pos = pos / resolution;
 			glm::vec2 st = pos * 5.0;
 
-			float n = noise(st);
-			glm::vec3 color = glm::vec3(n);
-
-			float y =  n;//???????? czy to ma sens wgl
-			//TESTOWO!!!
-			//y = 64;
+			float n = noise(st, random1, random2,random3);
+		
+			float y =  n;
+			
 		return y;
 	}
 
 	//temporrary
 	
 
-	void createTerrainFromNoise(int width,int height) {
+	void createTerrainFromNoise(int width,int height, float heightScale) {
 
 		
 		float scaleY = heightScale;
@@ -88,9 +86,16 @@ public:
 		float shiftY = 0.f;
 
 		float scalePixel = 10.f/(float)width;//do zmiany zeby bylo 10.0/(float)width
-
-
+		 
+		srand(time(0));
+		float random1 =  999999.0f; // 1.1 + (float)(std::rand() % (99999 - 1 + 1));
+		float random2 = 1.1 + (float)(std::rand() % (99999 - 1 + 1));
+		float random3 = 1.1 + (float)(std::rand() % (99999 - 1 + 1));
 		
+		random1 += 1.0 / (float)(std::rand() % (99999 - 1 + 1));
+		random2 += 1.0 / (float)(std::rand() % (99999 - 1 + 1));
+		random3 += 1.0 / (float)(std::rand() % (99999 - 1 + 1));
+
 		//close soil image?
 
 		//std::vector<float> verticesNormals;
@@ -100,7 +105,7 @@ public:
 			for (unsigned int j = 0;j < width;j++) {
 				
 
-				float y = calculateYFromNoise(glm::vec2((float)(-height / 2.0f + i), (float)(-width / 2.0f + j)), width, height);
+				float y = calculateYFromNoise(glm::vec2((float)(-height / 2.0f + i), (float)(-width / 2.0f + j)), width, height,random1,random2,random3);
 				//przykladowo!
 				//koordynat y w heightmapie
 				vertices.push_back(scalePixel * (-height / 2.0f + i));	//vertices v.x
@@ -172,7 +177,7 @@ public:
 		//koniec funkcji
 	}
 
-	void createTerrainFromPng() {
+	void createTerrainFromPng(float heightScale) {
 
 		int width, height, nChannels;
 		float scaleY = heightScale / 256.0f;

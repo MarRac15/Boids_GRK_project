@@ -36,8 +36,8 @@ namespace models {
 	Core::RenderContext testContext;
 	Core::RenderContext sharkContext;
 }
-float heightMapHeightScale = 5.0f;
-Terrain terrain(heightMapHeightScale);
+
+Terrain terrain;
 
 namespace texture {
 	GLuint ship;
@@ -50,7 +50,6 @@ namespace texture {
 }
 
 
-Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
 
@@ -331,6 +330,7 @@ void renderScene(GLFWwindow* window)
 	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
 	//drawObjectTexture2(models::sphereContext, glm::mat4()  * glm::scale(glm::vec3(1.0)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::translate(glm::vec3(2.0, 0.0, 0.0)), 3);
 
+
 	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	//IMGUI WINDOWS:
 	ImGui::Begin("Main testing window");
@@ -482,8 +482,8 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
-	//terrain.createTerrainFromNoise(21,21);
-	terrain.createTerrainFromPng();
+	terrain.createTerrainFromNoise(20,20,3.0);
+	terrain.createTerrainFromPng(5.0);
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

@@ -53,7 +53,7 @@ namespace texture {
 }
 
 
-Terrain terrain;
+//Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
 
@@ -349,7 +349,7 @@ void renderScene(GLFWwindow* window)
 	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
 	
 
-	//drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
+	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);

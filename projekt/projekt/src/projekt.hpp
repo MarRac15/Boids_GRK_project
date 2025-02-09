@@ -38,6 +38,8 @@ namespace models {
 	Core::RenderContext sharkContext;
 	Core::RenderContext leaderContext;
 }
+float heightMapHeightScale = 5.0f;
+Terrain terrain(heightMapHeightScale);
 
 namespace texture {
 	GLuint ship;
@@ -54,7 +56,6 @@ namespace texture {
 Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
-
 
 GLuint depthMapFBO;
 GLuint depthMap;
@@ -257,7 +258,11 @@ void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec
 	Core::DrawContext(context);
 
 }
-
+void drawTerrainDepth(glm::mat4 viewProjection, glm::mat4 modelMatrix) {
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "lightViewProjection"), 1, GL_FALSE, (float*)&viewProjection);
+	terrain.drawTerrain();
+}
 
 void drawObjectDepth(Core::RenderContext& context, glm::mat4 viewProjection, glm::mat4 modelMatrix) {
 	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
@@ -275,9 +280,9 @@ void renderShadowmapPointLight() {
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glm::mat4 viewProjection = createLightViewProjection();
-
+	
 	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
-
+	drawTerrainDepth(viewProjection, glm::mat4());
 
 	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
@@ -319,8 +324,8 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
 	terrain.drawTerrain();
-
 }
+
 
 void renderScene(GLFWwindow* window)
 {
@@ -338,8 +343,7 @@ void renderScene(GLFWwindow* window)
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
 	
-	//renderShadowmapPointLight();
-
+	renderShadowmapPointLight();
 
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
 	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
@@ -424,7 +428,7 @@ void renderScene(GLFWwindow* window)
 			}
 		}
 		else {
-			//drawObjectPhong(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+			//drawObjectPhong(modes::goldfishContext, b->getMatrix(), b->getGroupColor());
 			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
 		}
 	}
@@ -588,7 +592,8 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
-	terrain.createTerrain();
+	//terrain.createTerrainFromNoise(21,21);
+	terrain.createTerrainFromPng();
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

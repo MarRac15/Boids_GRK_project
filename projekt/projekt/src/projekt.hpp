@@ -33,8 +33,8 @@ bool fullScreen = false;
 GLFWmonitor* monitor = nullptr;
 
 //Terrain:
-float heightMapHeightScale = 5.0f;
-Terrain terrain(heightMapHeightScale);
+
+Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
 
@@ -65,6 +65,7 @@ namespace texture {
 	GLuint brickwall_normal;
 	GLuint shark_normal;
 }
+
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 
@@ -455,6 +456,7 @@ void renderScene(GLFWwindow* window) {
 		texture::brickwall, texture::brickwall_normal);
 	
 
+
 	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	
 
@@ -701,8 +703,11 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
-	terrain.createTerrainFromNoise(21,21);
-	//terrain.createTerrainFromPng();
+
+	terrain.createTerrainFromNoise(20,20,3.0);
+	//terrain.createTerrainFromPng(5.0);
+
+
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

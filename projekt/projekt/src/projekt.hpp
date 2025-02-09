@@ -29,7 +29,8 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 int WIDTH = 500, HEIGHT = 500;
 
 //Terrain:
-;
+
+Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
 
@@ -48,8 +49,6 @@ namespace models {
 	Core::RenderContext leaderContext;
 }
 
-Terrain terrain;
-
 namespace texture {
 	GLuint ship;
 	GLuint fish;
@@ -62,6 +61,7 @@ namespace texture {
 	GLuint brickwall_normal;
 	GLuint shark_normal;
 }
+
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 
@@ -601,8 +601,11 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
+
 	terrain.createTerrainFromNoise(20,20,3.0);
-	terrain.createTerrainFromPng(5.0);
+	//terrain.createTerrainFromPng(5.0);
+
+
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);

@@ -88,7 +88,7 @@ public:
 
 		float scaleY = heightScale;
 		//znormalizowanie do 0,1 oraz wysokosc jaka chce ortzymac czyli 20
-		float shiftY = 0.f;
+		float shiftY = -1.5f;
 
 		float scalePixel = 10.f/(float)width;//do zmiany zeby bylo 10.0/(float)width
 		 
@@ -186,13 +186,17 @@ public:
 		int width, height, nChannels;
 		float scaleY = heightScale / 256.0f;
 		//znormalizowanie do 0,1 oraz wysokosc jaka chce ortzymac czyli 20
-		float shiftY = 0.f;
+		float shiftY = -1.f;
 
-		float scalePixel = 0.5f;
+
 		
 
 		unsigned char* data = SOIL_load_image("img/heightmap/mini.png", &width, &height, &nChannels, 0);
 		
+		float scalePixel = 0.5;//10.0f / (float)width;
+		
+		//terrainHeight = height;
+		//terrainWidth = width;
 		//close soil image?
 		
 		//std::vector<float> verticesNormals;
@@ -283,7 +287,6 @@ public:
 		}
 		glBindVertexArray(0);
 	}
-
 
 
 	float getHeight(float x, float z) {

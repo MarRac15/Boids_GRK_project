@@ -80,9 +80,13 @@ public:
 	//temporrary
 	
 
+	std::vector<float> vertices;
+	int terrainHeight, terrainWidth;
 	void createTerrainFromNoise(int width,int height) {
 
-		
+		terrainWidth = width;
+		terrainHeight = height;
+
 		float scaleY = heightScale;
 		//znormalizowanie do 0,1 oraz wysokosc jaka chce ortzymac czyli 20
 		float shiftY = 0.f;
@@ -95,7 +99,6 @@ public:
 
 		//std::vector<float> verticesNormals;
 
-		std::vector<float> vertices;
 		for (unsigned int i = 0;i < height;i++) {
 			for (unsigned int j = 0;j < width;j++) {
 				
@@ -273,6 +276,28 @@ public:
 			glDrawElements(GL_TRIANGLE_STRIP, NUM_VER_PER_STRIP, GL_UNSIGNED_INT, (void*)(sizeof(unsigned int) * NUM_VER_PER_STRIP * strip));
 		}
 		glBindVertexArray(0);
+	}
+
+
+
+	float getHeight(float x, float z) {
+		float scalePixel = 10.f / (float)terrainWidth;
+
+		// liczenie indeksu siatki, w której le¿y punkt
+		int i = (int)((x / scalePixel) + (terrainHeight / 2.0f));  // pion
+		int j = (int)((z / scalePixel) + (terrainWidth / 2.0f));   // poziom
+
+		std::cout << " " << scalePixel << std::endl;
+
+
+		if (i < 0 || i >= terrainHeight || j < 0 || j >= terrainWidth) {
+			return 0.0f;
+		}
+
+		int index = (i * terrainWidth + j) * 6;  // indeks w vertices
+
+
+		return vertices[index + 1];
 	}
 
 };

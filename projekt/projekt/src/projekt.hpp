@@ -18,7 +18,6 @@
 #include <assimp/postprocess.h>
 #include <string>
 #include "Boids.hpp"
-#include "TerrainClass.cpp"
 
 #include <cstdlib>
 #include <ctime> 
@@ -108,8 +107,10 @@ glm::vec3 spotlightConeDir = glm::vec3(0, 0, 0);
 glm::vec3 spotlightColor = glm::vec3(0.4, 0.4, 0.9) * 3;
 float spotlightPhi = 3.14 / 4;
 
-
+// boids and obstacles
 std::vector<Boid*> boids;
+Obstacle obstacle;
+glm::vec3 obstacleTransformation = glm::vec3(0.f, 7.f, 0.f);
 
 float lastTime = -1.f;
 float deltaTime = 0.f;
@@ -118,7 +119,8 @@ float deltaTime = 0.f;
 bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
-glm::vec3 aquarium_color = glm::vec3(1.0f);
+glm::vec3 aquarium_color = glm::vec3(0.0f, 0.0f, 1.0f);
+;
 
 
 
@@ -399,7 +401,11 @@ void renderScene(GLFWwindow* window)
 	renderShadowmapPointLight();
 
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
-	drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), texture::brickwall, texture::brickwall_normal);
+	drawObjectTexture(models::aquariumContext, glm::mat4() * 
+		glm::scale(glm::vec3(0.3, 0.6,0.8)) * 
+		glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * 
+		glm::translate(glm::vec3(0.f,0.f,2.f)),
+		texture::brickwall, texture::brickwall_normal);
 	
 
 	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
@@ -474,7 +480,7 @@ void renderScene(GLFWwindow* window)
 
 	// Boids & Particles
 	for (Boid* b : boids) {
-		b->update(boids);
+		b->update(boids, terrain, obstacle);
 		b->updateParticles(deltaTime);
 
 		/*if (b->isLeader) {
@@ -493,6 +499,10 @@ void renderScene(GLFWwindow* window)
 		}
 	}
 	renderParticles(boids);
+
+	// obstacle
+	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), aquarium_color);
+
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -596,9 +606,9 @@ float randomFloat(float min, float max) {
 
 glm::vec3 randomVec3() {
 	return glm::vec3(
-		randomFloat(-4.0f, 4.0),
-		randomFloat(1.f, 4.0f),
-		randomFloat(-1.0f, 1.0f)
+		randomFloat(-3.f, 3.f),
+		randomFloat(5.5f, 10.0f),
+		randomFloat(-4.0f, 4.f)
 	);
 }
 
@@ -655,8 +665,8 @@ void init(GLFWwindow* window)
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
-	//terrain.createTerrainFromNoise(21,21);
-	terrain.createTerrainFromPng();
+	terrain.createTerrainFromNoise(21,21);
+	//terrain.createTerrainFromPng();
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
@@ -690,14 +700,17 @@ void init(GLFWwindow* window)
 
 
 	// shark
-	boids.push_back(new Boid(randomVec3(), true, 2, false));
+	boids.push_back(new Boid(glm::vec3(3.5f,10.2f,4.5f), true, 2, false));
 
 	//leader fish:
-	boids.push_back(new Boid(randomVec3(), false, 3, true));
+	//boids.push_back(new Boid(randomVec3(), false, 3, true));
 
 	for (Boid* b : boids) {
 		b->initParticles();
 	}
+
+	obstacle.center = obstacleTransformation;
+	obstacle.radious = 1.5f;
 
 
 }

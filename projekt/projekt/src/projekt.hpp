@@ -29,6 +29,8 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 //window:
 int WIDTH = 500, HEIGHT = 500;
 GLFWwindow* globalWindow;
+bool fullScreen = false;
+GLFWmonitor* monitor = nullptr;
 
 //Terrain:
 float heightMapHeightScale = 5.0f;
@@ -119,7 +121,7 @@ float deltaTime = 0.f;
 bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
-glm::vec3 aquarium_color = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 obstacle_color = glm::vec3(0.0f, 0.0f, 1.0f);
 ;
 
 
@@ -181,6 +183,8 @@ glm::mat4 createLightViewProjection() {
 
 glm::vec3 rayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, float planeZ) {
 	float t = (planeZ - rayOrigin.z) / rayDirection.z;
+	if (t < 0.0f) return glm::vec3(0.0,0.0,0.0);
+
 	return rayOrigin + t * rayDirection;
 }
 
@@ -204,9 +208,15 @@ std::pair<glm::vec3, glm::vec3> screenToWorld(double mouseX, double mouseY, glm:
 	return { rayOrigin, rayDirection };
 }
 
+
 void applyTargetingForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight) {
 
 	if (!leftMousePressed) return; //callback changes this to true when you click on the screen
+
+	if (ImGui::GetIO().WantCaptureMouse)
+	{
+		return;
+	}
 
 	double mouseX, mouseY;
 	glfwGetCursorPos(window, &mouseX, &mouseY);
@@ -216,8 +226,9 @@ void applyTargetingForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat
 	glm::vec3 rayOrigin = result.first;
 	glm::vec3 rayDirection = result.second;
 
-	float targetDepth = -5.0f;
+	float targetDepth = 0.2f;
 	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
+	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
 
 	for (Boid* boid : boids)
 	{
@@ -382,8 +393,7 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 }
 
 
-void renderScene(GLFWwindow* window)
-{
+void renderScene(GLFWwindow* window) {
 
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -415,7 +425,7 @@ void renderScene(GLFWwindow* window)
 	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
 	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
 	ImGui::Text("Set aquarium color:");
-	ImGui::ColorEdit3("change color", (float*)&aquarium_color);
+	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
 
 	// Seperation ON/OFF:
@@ -458,13 +468,6 @@ void renderScene(GLFWwindow* window)
 		b->setFleeWeight(newFleeWeight);
 	}
 
-	//Leader ON/OFF:
-	//static bool followEnabled = false;
-	/*ImGui::Checkbox("Leader", &followEnabled);
-	float newFollowWeight = followEnabled ? 3.0f : 0.0f;
-	for (Boid* b : boids) {
-		b->setFollowWeight(newFollowWeight);
-	}*/
 
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
@@ -483,25 +486,20 @@ void renderScene(GLFWwindow* window)
 		b->update(boids, terrain, obstacle);
 		b->updateParticles(deltaTime);
 
-		/*if (b->isLeader) {
-			if (followEnabled) {
-				drawObjectTexture(models::leaderContext, b->getMatrix()*glm::scale(glm::vec3(0.01)), texture::leaderFish, texture::fishNormal);
-			}
-		}*/
 		if (b->isShark) {
 			if (fleeEnabled) {
 				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shark_normal );
 			}
 		}
 		else {
-			//drawObjectPhong(modes::goldfishContext, b->getMatrix(), b->getGroupColor());
+
 			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
 		}
 	}
 	renderParticles(boids);
 
 	// obstacle
-	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), aquarium_color);
+	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
 
 
 	glUseProgram(0);
@@ -559,11 +557,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 }
 
-//void cursor_position_callback(GLFWwindow* window, double xPos, double yPos)
-//{
-//	lastMouseX = xPos;
-//	lastMouseY = yPos;
-//}
 
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -636,11 +629,6 @@ void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	//fullscreen - WILL FORCE TO GO INTO FULLSCREEN:
-	/*GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-	glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);*/
-
 	//input:
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
@@ -649,9 +637,6 @@ void init(GLFWwindow* window)
 	//ImGUI initialization:
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	//if (!io.WantCaptureMouse) {
-	//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	//}
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
@@ -702,8 +687,6 @@ void init(GLFWwindow* window)
 	// shark
 	boids.push_back(new Boid(glm::vec3(3.5f,10.2f,4.5f), true, 2, false));
 
-	//leader fish:
-	//boids.push_back(new Boid(randomVec3(), false, 3, true));
 
 	for (Boid* b : boids) {
 		b->initParticles();
@@ -760,6 +743,28 @@ void processInput(GLFWwindow* window)
 		printf("spaceshipDir = glm::vec3(%ff, %ff, %ff);\n", spaceshipDir.x, spaceshipDir.y, spaceshipDir.z);
 	}
 
+
+	//for entering fullscreen mode:
+	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+	{
+		fullScreen = !fullScreen;
+
+		if (fullScreen) 
+		{
+			glfwSetWindowMonitor(window, nullptr, 50, 50, WIDTH, HEIGHT, GLFW_DONT_CARE);
+		}
+		else {
+			monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode * mode = glfwGetVideoMode(monitor);
+			WIDTH = mode->width;
+			HEIGHT = mode->height;
+			glfwSetWindowMonitor(window, monitor, 0, 0, WIDTH, HEIGHT, mode->refreshRate);
+		}
+		
+		
+	}
+
+	//enable/disable cursor:
 	bool iKeyPressedNow = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
 	if (iKeyPressedNow && !iKeyPressedLastFrame)
 	{

@@ -29,6 +29,17 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 //window:
 int WIDTH = 500, HEIGHT = 500;
 
+//Terrain:
+float heightMapHeightScale = 5.0f;
+Terrain terrain(heightMapHeightScale);
+unsigned int NUM_STRIPS;
+unsigned int NUM_VERTS_PER_STRIP;
+
+GLuint VAO, VBO;
+float aspectRatio = 1.f;
+float exposition = 1.f;
+
+//models and textures:
 namespace models {
 	Core::RenderContext spaceshipContext;
 	Core::RenderContext sphereContext;
@@ -38,8 +49,6 @@ namespace models {
 	Core::RenderContext sharkContext;
 	Core::RenderContext leaderContext;
 }
-float heightMapHeightScale = 5.0f;
-Terrain terrain(heightMapHeightScale);
 
 namespace texture {
 	GLuint ship;
@@ -47,15 +56,14 @@ namespace texture {
 	GLuint leaderFish;
 	GLuint brickwall;
 	GLuint blueTest;
+	GLuint shark;
 	GLuint shipNormal;
 	GLuint fishNormal;
 	GLuint brickwall_normal;
+	GLuint shark_normal;
 }
-
-
-//Terrain terrain;
-unsigned int NUM_STRIPS;
-unsigned int NUM_VERTS_PER_STRIP;
+Core::RenderContext shipContext;
+Core::RenderContext sphereContext;
 
 GLuint depthMapFBO;
 GLuint depthMap;
@@ -68,11 +76,6 @@ GLuint programDepth;
 GLuint programTex;
 
 Core::Shader_Loader shaderLoader;
-
-Core::RenderContext shipContext;
-Core::RenderContext sphereContext;
-Core::RenderContext goldfishContext;
-Core::RenderContext sharkContext;
 
 //for camera:
 glm::vec3 cameraPos = glm::vec3(0.479490f, 1.250000f, -2.124680f);
@@ -88,12 +91,6 @@ float lastMouseY = HEIGHT/2.0;
 bool firstMouse = true;
 bool leftMousePressed = false;
 
-
-GLuint VAO, VBO;
-
-float aspectRatio = 1.f;
-
-float exposition = 1.f;
 
 //lighting variables:
 glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
@@ -400,13 +397,14 @@ void renderScene(GLFWwindow* window)
 	}
 
 	//Leader ON/OFF:
-	static bool followEnabled = false;
-	ImGui::Checkbox("Leader", &followEnabled);
+	//static bool followEnabled = false;
+	/*ImGui::Checkbox("Leader", &followEnabled);
 	float newFollowWeight = followEnabled ? 3.0f : 0.0f;
 	for (Boid* b : boids) {
 		b->setFollowWeight(newFollowWeight);
-	}
+	}*/
 
+	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -416,15 +414,14 @@ void renderScene(GLFWwindow* window)
 		b->update(boids);
 		b->updateParticles(deltaTime);
 
-		if (b->isLeader) {
+		/*if (b->isLeader) {
 			if (followEnabled) {
 				drawObjectTexture(models::leaderContext, b->getMatrix()*glm::scale(glm::vec3(0.01)), texture::leaderFish, texture::fishNormal);
 			}
-		}
+		}*/
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectPhong(models::sharkContext, b->getMatrix() * glm::scale(glm::vec3(0.4,0.4,0.3))*
-					glm::rotate(glm::radians(-180.0f), glm::vec3(0.0f, 1.0f, 0.0f)), b->getGroupColor());
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shipNormal );
 			}
 		}
 		else {
@@ -604,17 +601,20 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 	loadModelToContext("./models/golden_fish.obj", models::leaderContext);
+	loadModelToContext("./models/piranha.obj", models::sharkContext);
 
-	loadModelToContext("./models/shark.obj", models::sharkContext);
-
+	//textures:
 	texture::ship = Core::LoadTexture("./textures/spaceship.jpg");
 	texture::fish = Core::LoadTexture("./textures/Stylized_Scales_003_basecolor.png");
 	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
+	texture::shark = Core::LoadTexture("./textures/shark.jpg");
+	//normal maps:
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
 	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
+	texture::shark_normal = Core::LoadTexture("./textures/shark_normal.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

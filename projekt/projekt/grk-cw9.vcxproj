@@ -55,6 +55,8 @@
     <ClInclude Include="src\Texture.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\normal_test.frag" />
+    <None Include="shaders\normal_test.vert" />
     <None Include="shaders\shader_8_sun.frag" />
     <None Include="shaders\shader_8_sun.vert" />
     <None Include="shaders\shader_9_1.frag" />
@@ -65,6 +67,8 @@
     <None Include="shaders\test.vert" />
     <None Include="shaders\with_shadow_mapping.frag" />
     <None Include="shaders\with_shadow_mapping.vert" />
+    <None Include="shaders\with_textures.frag" />
+    <None Include="shaders\with_textures.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5BACD057-4B83-4CB6-A367-40A10BCE2149}</ProjectGuid>

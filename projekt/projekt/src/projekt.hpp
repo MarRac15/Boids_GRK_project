@@ -26,8 +26,10 @@
 
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
+
 //window:
 int WIDTH = 500, HEIGHT = 500;
+GLFWwindow* globalWindow;
 
 //Terrain:
 float heightMapHeightScale = 5.0f;
@@ -175,6 +177,60 @@ glm::mat4 createLightViewProjection() {
 	return projection * view;
 }
 
+glm::vec3 rayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, float planeZ) {
+	float t = (planeZ - rayOrigin.z) / rayDirection.z;
+	return rayOrigin + t * rayDirection;
+}
+
+std::pair<glm::vec3, glm::vec3> screenToWorld(double mouseX, double mouseY, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight)
+{
+	float ndcX = (2.0f * mouseX) / screenWidth - 1.0f;
+	float ndcY = 1.0f - (2.0f * mouseY) / screenHeight;
+
+	glm::vec4 nearPlanePos = glm::vec4(ndcX, ndcY, -1.0f, 1.0f);
+	glm::vec4 farPlanePos = glm::vec4(ndcX, ndcY, 1.0f, 1.0f);
+	glm::mat4 inverseVP = glm::inverse(projectionMatrix * viewMatrix);
+
+	glm::vec4 nearPlaneWorld = inverseVP * nearPlanePos;
+	glm::vec4 farPlaneWorld = inverseVP * farPlanePos;
+	nearPlaneWorld /= nearPlaneWorld.w;
+	farPlaneWorld /= farPlaneWorld.w;
+
+	glm::vec3 rayOrigin = glm::vec3(nearPlaneWorld);
+	glm::vec3 rayDirection = glm::normalize(glm::vec3(farPlaneWorld - nearPlaneWorld));
+
+	return { rayOrigin, rayDirection };
+}
+
+void applyTargetingForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight) {
+
+	if (!leftMousePressed) return; //callback changes this to true when you click on the screen
+
+	double mouseX, mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+
+	//convert mouse click to world space:
+	std::pair<glm::vec3, glm::vec3> result = screenToWorld(mouseX, mouseY, viewMatrix, projectionMatrix, screenWidth, screenHeight);
+	glm::vec3 rayOrigin = result.first;
+	glm::vec3 rayDirection = result.second;
+
+	float targetDepth = -5.0f;
+	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
+
+	for (Boid* boid : boids)
+	{
+		glm::vec3 direction = worldMousePos - boid->position;
+		float distance = glm::length(direction);
+
+		if (distance > 0.01f)
+		{
+			direction = glm::normalize(direction);
+			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += direction * forceStrength;
+		}
+	}
+
+}
 
 
 void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
@@ -409,6 +465,13 @@ void renderScene(GLFWwindow* window)
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+	//taregt force:
+	glm::mat4 viewMatrix = createCameraMatrix();
+	glm::mat4 projectionMatrix = createPerspectiveMatrix();
+	
+	applyTargetingForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
+
+
 	// Boids & Particles
 	for (Boid* b : boids) {
 		b->update(boids);
@@ -421,7 +484,7 @@ void renderScene(GLFWwindow* window)
 		}*/
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shipNormal );
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shark_normal );
 			}
 		}
 		else {
@@ -495,11 +558,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-
+	
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
 		if (action == GLFW_PRESS) {
-			leftMousePressed = true;
+			leftMousePressed = true; 
 		}
 		else if (action == GLFW_RELEASE) {
 			leftMousePressed = false;
@@ -507,6 +570,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 
 }
+
+
 
 
 void loadModelToContext(std::string path, Core::RenderContext& context)
@@ -562,12 +627,13 @@ void init(GLFWwindow* window)
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	//fullscreen - WILL FORCE TO GO INTO FULLSCREEN:
-	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	/*GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-	glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+	glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);*/
 
 	//input:
 	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	//ImGUI initialization:
@@ -609,12 +675,12 @@ void init(GLFWwindow* window)
 	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
-	texture::shark = Core::LoadTexture("./textures/shark.jpg");
+	texture::shark = Core::LoadTexture("./textures/Tiles_025_basecolor.jpg");
 	//normal maps:
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
 	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
-	texture::shark_normal = Core::LoadTexture("./textures/shark_normal.jpg");
+	texture::shark_normal = Core::LoadTexture("./textures/Tiles_025_normal.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

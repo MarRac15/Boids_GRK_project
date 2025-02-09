@@ -7,6 +7,7 @@
 
 #include "Shader_Loader.h"
 #include "Render_Utils.h"
+#include "TerrainClass.cpp"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -33,20 +34,29 @@ const int MAX_PARTICLES = 3;
 Particle particles[MAX_PARTICLES];
 
 
+struct Obstacle {
+	glm::vec3 center;
+	float radious;
+};
+
+
 
 class Boid {
 public:
 	glm::vec3 position;
 	glm::vec3 velocity;  // (szybkość + kierunek)
+	//glm::vec3 targetPosition;
 	int groupId;
 	bool isShark;
+	bool isLeader;
+	//int followGroup;
 	int attackGroup;
 
 	static const int PARTICLES_COUNT = 3;
 	std::vector<Particle> particles;
 
 
-	float maxSpeed = 0.05f;
+	float maxSpeed = 0.08f;
 	float maxForce = 0.2f;
 
 	float NEIGHBOUR_DISTANCE = 2.f;
@@ -56,17 +66,22 @@ public:
 	float COHESION_WEIGHT = 0.001f;
 	float SEPARATION_WEIGHT = 2.0f;
 	float FLEE_WEIGHT = 3.0f;
+	//float FOLLOW_WEIGHT = 3.0f;
 
-	float minX = -5.f, maxX = 7.0f;
-	float minY = 1.f, maxY = 6.0f;
-	float minZ = -1.6f, maxZ = 1.6f;
+	float minX = -3.0f, maxX = 3.0f;
+	float minY = 5.f, maxY = 8.5f;
+	float minZ = -4.0f, maxZ = 4.0f;
 
 
-	Boid(glm::vec3 startPosition, bool isShark, int groupId) : position(startPosition), isShark(isShark) , groupId(groupId){
+	Boid(glm::vec3 startPosition, bool isShark, int groupId, bool isLeader) : position(startPosition), isShark(isShark) , groupId(groupId){
 		if (isShark == true)
 		{
 			attackGroup = randomInt(0, 1);
 		}
+		/*if (isLeader == true)
+		{
+			followGroup = randomInt(0,1);
+		}*/
 		velocity = glm::vec3(0.01f);
 	}
 
@@ -81,29 +96,44 @@ public:
 	}
 
 
-	void applyBoundaryForce() {
+	void applyBoundaryForce(Terrain terrain) {
 		glm::vec3 boundaryForce(0.0f);
-		if (position.x > maxX) {
+
+		float minY = terrain.getHeight(position.x, position.z) + 0.6;
+
+		glm::vec3 futurePosition = position + velocity;
+
+		if (futurePosition.x > maxX) {
 			boundaryForce.x = -maxForce;
 		}
-		else if (position.x < minX) {
+		else if (futurePosition.x < minX) {
 			boundaryForce.x = maxForce;
 		}
 
-		if (position.y > maxY) {
+		if (futurePosition.y > maxY+2.0f) {
 			boundaryForce.y = -maxForce;
 		}
-		else if (position.y < minY) {
+		else if (futurePosition.y < minY) {
 			boundaryForce.y = maxForce;
 		}
 
-		if (position.z > maxZ) {
+		if (futurePosition.z > maxZ) {
 			boundaryForce.z = -maxForce;
 		}
-		else if (position.z < minZ) {
+		else if (futurePosition.z < minZ) {
 			boundaryForce.z = maxForce;
 		}
-		velocity += boundaryForce;
+
+		if (futurePosition.y > maxY) {
+			boundaryForce.y = -maxForce;
+		}
+		else if (futurePosition.y < minY) {
+			boundaryForce.y = maxForce;
+			velocity += boundaryForce;
+			return;
+		}
+
+		velocity = glm::mix(velocity, velocity + boundaryForce, 0.09f);
 	}
 
 
@@ -127,10 +157,19 @@ public:
 		FLEE_WEIGHT = weight;
 	}
 
+	//void setFollowWeight(float weight)
+	//{
+	//	FOLLOW_WEIGHT = weight;
+	//}
+
 	bool getIsShark()
 	{
 		return isShark;
 	}
+
+	//bool getIsLeader() {
+	//	return isLeader;
+	//}
 
 	glm::vec3 separate(std::vector<Boid*>& boids) {
 		glm::vec3 avoid_vector(0.0f);
@@ -225,8 +264,83 @@ public:
 		return escapeDirection;
 	}
 
+	//glm::vec3 leaderBehaviour()
+	//{
+	//	glm::vec3 direction = targetPosition - position;
+	//	if (glm::length(direction) < 0.5f)
+	//	{
+	//		targetPosition = glm::vec3(
+	//			/*randomFloat(minX, maxX),
+	//			randomFloat(minY, maxY),
+	//			randomFloat(minZ, maxZ)*/
+	//		);
+	//	}
+	//	glm::vec3 desiredVelocity = glm::normalize(direction) * maxSpeed;
+	//	glm::vec3 steering = desiredVelocity - velocity;
+	//	steering = glm::clamp(steering, glm::vec3(-maxForce), glm::vec3(maxForce));
+	//	return steering;
+	//}
 
-	void update(std::vector<Boid*>& boids) {
+	//glm::vec3 followTheLeader(std::vector<Boid*>& boids)
+	//{
+	//	glm::vec3 followDirection(0.0f);
+	//	glm::vec3 leaderPosition(0.0f);
+	//	glm::vec3 leaderVelocity(0.0f);
+	//	bool foundLeader=false;
+
+	//	for (Boid* other_boid : boids)
+	//	{
+	//		if (other_boid->isLeader)
+	//		{
+	//			leaderPosition = other_boid->position;
+	//			leaderVelocity = other_boid->velocity;
+	//			foundLeader = true;
+	//			break;
+
+	//		}
+	//	}
+	//		if (foundLeader)
+	//		{
+	//			followDirection = leaderPosition - position;
+	//			float distance = glm::length(followDirection);
+
+	//			if (distance <= NEIGHBOUR_DISTANCE) {
+	//				followDirection = glm::normalize(followDirection) * FOLLOW_WEIGHT;
+	//			}
+
+	//		}
+	//	
+	//	return followDirection;
+	//}
+
+	void checkSphereCollision(const Obstacle& obstacle) {
+		glm::vec3 futurePosition = position + velocity;
+
+		glm::vec3 directionToObstacle = futurePosition - obstacle.center;
+		float distance = glm::length(directionToObstacle);
+
+		if (distance < obstacle.radious) {
+
+			glm::vec3 reflectionDirection = glm::normalize(directionToObstacle);
+
+			velocity = glm::normalize(velocity) * maxSpeed;
+			velocity -= reflectionDirection * glm::dot(velocity, reflectionDirection) * 2.0f;
+
+			if (glm::length(velocity) > maxSpeed) {
+				velocity = glm::normalize(velocity) * maxSpeed;
+			}
+
+			position = obstacle.center + reflectionDirection * (obstacle.radious + 0.1f);
+		}
+	}
+
+	void update(std::vector<Boid*>& boids, Terrain terrain, Obstacle obstacle) {
+
+		/*if (isLeader) {
+			glm::vec3 leaderForce = leaderBehaviour();
+			velocity += leaderForce;
+		}*/
+
 		if (isShark) {
 			glm::vec3 _shark_Attack = sharkAttack(boids);
 			velocity = _shark_Attack * maxSpeed;
@@ -241,6 +355,7 @@ public:
 			glm::vec3 _aligment = align(boids) * ALIGMENT_WEIGHT;
 			glm::vec3 _cohesion = cohesion(boids) * COHESION_WEIGHT;
 			glm::vec3 _flee = fleeFromShark(boids) * FLEE_WEIGHT;
+			//glm::vec3 _follow = followTheLeader(boids) * FOLLOW_WEIGHT;
 
 			glm::vec3 steering = _separation + _aligment + _cohesion;
 
@@ -256,7 +371,8 @@ public:
 		}
 
 		position += velocity;
-		applyBoundaryForce();
+		checkSphereCollision(obstacle);
+		applyBoundaryForce(terrain);
 		
 	}
 

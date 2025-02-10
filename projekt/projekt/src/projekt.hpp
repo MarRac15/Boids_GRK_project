@@ -7,7 +7,7 @@
 #include "ext.hpp"
 #include <iostream>
 #include <cmath>
-
+#include <vector>
 #include "Shader_Loader.h"
 #include "Render_Utils.h"
 #include "Texture.h"
@@ -30,6 +30,9 @@ int WIDTH = 500, HEIGHT = 500;
 
 //Terrain:
 
+GLuint skyboxWater;
+
+
 Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
@@ -47,6 +50,7 @@ namespace models {
 	Core::RenderContext testContext;
 	Core::RenderContext sharkContext;
 	Core::RenderContext leaderContext;
+	Core::RenderContext cubeContext;
 }
 
 namespace texture {
@@ -74,6 +78,7 @@ GLuint programPhSh;
 GLuint programTest;
 GLuint programDepth;
 GLuint programTex;
+GLuint programSkyBox;
 
 Core::Shader_Loader shaderLoader;
 
@@ -97,11 +102,11 @@ glm::vec3 sunPos = glm::vec3(-4.740971f, 2.149999f, 0.369280f);
 glm::vec3 sunDir = glm::vec3(-0.93633f, 0.351106, 0.003226f);
 glm::vec3 sunColor = glm::vec3(0.9f, 0.9f, 0.7f) * 0.5;
 
-glm::vec3 pointlightPos = glm::vec3(5.f,5.f,-5.f);
+glm::vec3 pointlightPos = glm::vec3(0.f,5.f,-5.f);
 glm::vec3 pointlightDir = glm::vec3(0., -0.3, 0.5);
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
-glm::vec3 spotlightPos = glm::vec3(0, 0, 0);
+glm::vec3 spotlightPos = glm::vec3(0, 0., 0);
 glm::vec3 spotlightConeDir = glm::vec3(0, 0, 0);
 glm::vec3 spotlightColor = glm::vec3(0.4, 0.4, 0.9) * 3;
 float spotlightPhi = 3.14 / 4;
@@ -170,7 +175,7 @@ glm::mat4 createPerspectiveMatrix()
 
 
 glm::mat4 createLightViewProjection() {
-	glm::mat4 view = glm::lookAt(pointlightPos, pointlightPos - pointlightDir, glm::vec3(0, 1, 0));
+	glm::mat4 view = glm::lookAt(pointlightDir, glm::vec3(0,0,0), glm::vec3(0, 1, 0));
 	//jak ustawić w którą stronę patrzy światło... 
 	//zeby zgadzalo sie z światłem kierunkowym
 
@@ -280,11 +285,13 @@ void renderShadowmapPointLight() {
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glm::mat4 viewProjection = createLightViewProjection();
-	
-	//drawObjectDepth(models::sphereContext, viewProjection,glm::translate(glm::vec3(0.f, 2.f, 0.f)));
-	drawTerrainDepth(viewProjection, glm::mat4());
+	drawObjectDepth(models::aquariumContext, viewProjection,glm::mat4() *
+		glm::scale(glm::vec3(0.3, 0.6, 0.8)) *
+		glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+		glm::translate(glm::vec3(0.f, 0.f, 2.f)));
+	drawObjectDepth(models::sphereContext, viewProjection,glm::mat4() * glm::translate(obstacleTransformation));
 
-	//drawObjectDepth(models::aquariumContext, viewProjection, glm::mat4() * glm::scale(glm::vec3(0.3)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+	drawTerrainDepth(viewProjection, glm::mat4());
 
 	for (Boid* b : boids) {
 		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
@@ -326,6 +333,19 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 	terrain.drawTerrain();
 }
 
+void drawSkyBox() {
+
+	glDepthMask(GL_FALSE);
+	glUseProgram(programSkyBox);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxWater);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * glm::mat4(glm::mat3(createCameraMatrix()));
+	glm::mat4 transformation = viewProjectionMatrix;
+	Core::SetActiveTexture(skyboxWater, "skybox",programSkyBox,0);
+	glUniformMatrix4fv(glGetUniformLocation(programSkyBox, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	//glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+	Core::DrawContext(models::cubeContext);
+	glDepthMask(GL_TRUE);
+}
 
 void renderScene(GLFWwindow* window)
 {
@@ -345,6 +365,8 @@ void renderScene(GLFWwindow* window)
 	
 	renderShadowmapPointLight();
 
+	drawSkyBox();
+	
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
 	drawObjectTexture(models::aquariumContext, glm::mat4() * 
 		glm::scale(glm::vec3(0.3, 0.6,0.8)) * 
@@ -353,8 +375,7 @@ void renderScene(GLFWwindow* window)
 		texture::brickwall, texture::brickwall_normal);
 	
 
-
-	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
+	drawTerrain(glm::vec3(0.6, 0.8, 0.6), glm::mat4());
 	
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
@@ -549,6 +570,38 @@ glm::vec3 randomVec3() {
 	);
 }
 
+void initSkyBox() {
+	glGenTextures(1, &skyboxWater);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxWater);
+
+	int width, height, nrChannels;
+	
+	std::vector<std::string> faces{
+	"img/underwater/uw_ft.jpg",//
+	"img/underwater/uw_bk.jpg",//
+	"img/underwater/uw_up.jpg",//
+	"img/underwater/uw_dn.jpg",//
+	"img/underwater/uw_rt.jpg",
+	"img/underwater/uw_lf.jpg",
+	};
+
+	for(unsigned int i = 0; i < faces.size(); i++)
+	{
+		unsigned char* data;
+		data = SOIL_load_image(faces[i].c_str(), &width, &height, &nrChannels, SOIL_LOAD_RGBA);
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+			0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data
+		);
+		SOIL_free_image_data(data);
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+}
+
 void initDepthMap() {
 	glGenFramebuffers(1, &depthMapFBO);
 
@@ -598,14 +651,14 @@ void init(GLFWwindow* window)
 	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 	programTex = shaderLoader.CreateProgram("shaders/with_textures.vert", "shaders/with_textures.frag");
+	programSkyBox = shaderLoader.CreateProgram("shaders/cubemap.vert", "shaders/cubemap.frag");
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
 	initDepthMap();
+	initSkyBox();
 
 	terrain.createTerrainFromNoise(20,20,3.0);
 	//terrain.createTerrainFromPng(5.0);
-
-
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
@@ -617,6 +670,7 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 	loadModelToContext("./models/golden_fish.obj", models::leaderContext);
 	loadModelToContext("./models/piranha.obj", models::sharkContext);
+	loadModelToContext("./models/cube.obj", models::cubeContext);
 
 	//textures:
 	texture::ship = Core::LoadTexture("./textures/spaceship.jpg");

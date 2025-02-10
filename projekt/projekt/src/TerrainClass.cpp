@@ -22,7 +22,7 @@
 
 class Terrain {
 
-
+	float scalePixel;
 	unsigned int NUM_OF_STRIPS;
 	unsigned int NUM_VER_PER_STRIP;
 
@@ -31,7 +31,7 @@ class Terrain {
 public:
 	Terrain(){ 
 		NUM_OF_STRIPS = 0;NUM_VER_PER_STRIP = 0;
-
+		scalePixel = 0.5;
 	}
 
 	float random(glm::vec2 st,float random1, float random2, float random3) {
@@ -88,9 +88,9 @@ public:
 
 		float scaleY = heightScale;
 		//znormalizowanie do 0,1 oraz wysokosc jaka chce ortzymac czyli 20
-		float shiftY = -1.5f;
+		float shiftY = -1.f;
 
-		float scalePixel = 10.f/(float)width;//do zmiany zeby bylo 10.0/(float)width
+		scalePixel = 10.f/(float)width;//do zmiany zeby bylo 10.0/(float)width
 		 
 		srand(time(0));
 		float random1 =  999999.0f; // 1.1 + (float)(std::rand() % (99999 - 1 + 1));
@@ -193,7 +193,7 @@ public:
 
 		unsigned char* data = SOIL_load_image("img/heightmap/mini.png", &width, &height, &nChannels, 0);
 		
-		float scalePixel = 0.5;//10.0f / (float)width;
+		scalePixel = 0.5;//10.0f / (float)width;
 		
 		//terrainHeight = height;
 		//terrainWidth = width;
@@ -290,15 +290,13 @@ public:
 
 
 	float getHeight(float x, float z) {
-		float scalePixel = 10.f / (float)terrainWidth;
+		//float scalePixel = 10.f / (float)terrainWidth;
 
 		// liczenie indeksu siatki, w której le¿y punkt
 		int i = (int)((x / scalePixel) + (terrainHeight / 2.0f));  // pion
 		int j = (int)((z / scalePixel) + (terrainWidth / 2.0f));   // poziom
 
-		std::cout << " " << scalePixel << std::endl;
-
-
+		
 		if (i < 0 || i >= terrainHeight || j < 0 || j >= terrainWidth) {
 			return 0.0f;
 		}

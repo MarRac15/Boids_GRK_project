@@ -190,5 +190,11 @@
     <None Include="shaders\normal_test.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\cubemap.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\cubemap.vert">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

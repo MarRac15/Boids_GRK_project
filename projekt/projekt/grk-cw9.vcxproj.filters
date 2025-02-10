@@ -184,10 +184,10 @@
     <None Include="shaders\with_textures.vert">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="shaders\normal_test.frag">
+    <None Include="shaders\shader_disco.frag">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="shaders\normal_test.vert">
+    <None Include="shaders\shader_disco.vert">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

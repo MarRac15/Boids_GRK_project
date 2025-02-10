@@ -6,7 +6,6 @@ uniform vec3 color;
 uniform vec3 lightColor;
 uniform vec3 cameraPos;
 
-uniform sampler2D depthMap;
 uniform sampler2D colorTexture;
 uniform sampler2D normalSampler;
 uniform bool useNormalMapping;
@@ -15,7 +14,6 @@ in vec2 texCoord;
 in vec3 vNormal;
 in vec3 vPosition;
 in vec3 worldPos;
-in vec4 sunSpacePos;
 in vec3 lightDir_TS;
 in vec3 viewDir_TS;
 

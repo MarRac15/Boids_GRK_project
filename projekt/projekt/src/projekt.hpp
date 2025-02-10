@@ -33,7 +33,6 @@ bool fullScreen = false;
 GLFWmonitor* monitor = nullptr;
 
 //Terrain:
-
 Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
@@ -78,6 +77,7 @@ GLuint programPhSh;
 GLuint programTest;
 GLuint programDepth;
 GLuint programTex;
+GLuint programDisco;
 
 Core::Shader_Loader shaderLoader;
 
@@ -124,6 +124,7 @@ bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
 bool useNormalMapping = true;
+bool discoMode = false;
 glm::vec3 obstacle_color = glm::vec3(0.0f, 0.0f, 1.0f);
 
 
@@ -298,12 +299,6 @@ void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	glm::mat4 lightVP = createLightViewProjection();
-	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
-
-
 
 	Core::DrawContext(context);
 }
@@ -325,45 +320,30 @@ void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLui
 	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	//glm::mat4 lightVP = createLightViewProjection();
-	//glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-
-
-
 	Core::DrawContext(context);
 }
 
-void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, float roughness, float metallic) {
+void drawObjectDisco(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
+
+	glUseProgram(programDisco);
 
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(programPBR, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniformMatrix4fv(glGetUniformLocation(programPBR, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniformMatrix4fv(glGetUniformLocation(programDisco, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programDisco, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programDisco, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programDisco, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programDisco, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programDisco, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programDisco, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	glUniform1f(glGetUniformLocation(programPBR, "exposition"), exposition);
-
-	glUniform1f(glGetUniformLocation(programPBR, "roughness"), roughness);
-	glUniform1f(glGetUniformLocation(programPBR, "metallic"), metallic);
-
-	glUniform3f(glGetUniformLocation(programPBR, "color"), color.x, color.y, color.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
-	glUniform3f(glGetUniformLocation(programPBR, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
-	glUniform3f(glGetUniformLocation(programPBR, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightConeDir"), spotlightConeDir.x, spotlightConeDir.y, spotlightConeDir.z);
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightPos"), spotlightPos.x, spotlightPos.y, spotlightPos.z);
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightColor"), spotlightColor.x, spotlightColor.y, spotlightColor.z);
-	glUniform1f(glGetUniformLocation(programPBR, "spotlightPhi"), spotlightPhi);
+	float time = glfwGetTime();
+	glUniform1f(glGetUniformLocation(programDisco, "time"), time);
 	Core::DrawContext(context);
-
 }
+
+
+
 void drawTerrainDepth(glm::mat4 viewProjection, glm::mat4 modelMatrix) {
 	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
 	glUniformMatrix4fv(glGetUniformLocation(programDepth, "lightViewProjection"), 1, GL_FALSE, (float*)&viewProjection);
@@ -448,6 +428,8 @@ void renderScene(GLFWwindow* window) {
 
 	float time = glfwGetTime();
 	updateDeltaTime(time);
+
+
 	glUseProgram(programTex);
 	glUniform1i(glGetUniformLocation(programTex, "useNormalMapping"), useNormalMapping);
 	
@@ -544,6 +526,9 @@ void renderScene(GLFWwindow* window) {
 	}
 	//
 
+	//DISCO MODE:
+	ImGui::Checkbox("DISCO MODE", &discoMode);
+
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
 	ImGui::Render();
@@ -567,18 +552,37 @@ void renderScene(GLFWwindow* window) {
 
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::shark, texture::shark_normal );
+				if (discoMode)
+				{
+					drawObjectDisco(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+				}
+				else {
+					drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::shark, texture::shark_normal);
+				}
 			}
 		}
 		else {
-
-			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
+			if (discoMode)
+			{
+				drawObjectDisco(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+			}
+			else {
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
+			}
+			
 		}
 	}
 	renderParticles(boids);
 
 	// obstacle
-	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	if (discoMode)
+	{
+		drawObjectDisco(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	}
+	else {
+		drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	}
+	
 
 
 	glUseProgram(0);
@@ -736,7 +740,7 @@ void init(GLFWwindow* window)
 	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 	programTex = shaderLoader.CreateProgram("shaders/with_textures.vert", "shaders/with_textures.frag");
-	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
+	programDisco = shaderLoader.CreateProgram("shaders/shader_disco.vert", "shaders/shader_disco.frag");
 
 	initDepthMap();
 

@@ -55,6 +55,10 @@
     <ClInclude Include="src\Texture.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\cubemap.frag" />
+    <None Include="shaders\cubemap.vert" />
+    <None Include="shaders\normal_test.frag" />
+    <None Include="shaders\normal_test.vert" />
     <None Include="shaders\shader_disco.frag" />
     <None Include="shaders\shader_disco.vert" />
     <None Include="shaders\shader_8_sun.frag" />

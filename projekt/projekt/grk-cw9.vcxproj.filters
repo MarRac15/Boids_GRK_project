@@ -190,5 +190,11 @@
     <None Include="shaders\shader_disco.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\cubemap.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\cubemap.vert">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

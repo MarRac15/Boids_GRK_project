@@ -42,7 +42,7 @@ void main()
 	vec3 textureColor = texture2D(colorTexture, texCoord).rgb;
 
 	//diffuse:
-	vec3 ambient = 0.3 * textureColor;
+	vec3 ambient = 0.4 * textureColor;
 	vec3 lightDir = normalize(lightDir_TS);
 	float intensityDiffuse = max(dot(lightDir, N), 0.0);
 

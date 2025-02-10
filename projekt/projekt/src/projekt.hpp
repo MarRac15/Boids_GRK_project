@@ -453,7 +453,7 @@ void renderScene(GLFWwindow* window) {
 	
 	renderShadowmapPointLight();
 
-	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
+	
 	drawObjectTexture(models::aquariumContext, glm::mat4() * 
 		glm::scale(glm::vec3(0.3, 0.6,0.8)) * 
 		glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) * 
@@ -461,15 +461,15 @@ void renderScene(GLFWwindow* window) {
 		texture::brickwall, texture::brickwall_normal);
 	
 
-
 	drawTerrain(glm::vec3(0.3, 0.3, 0.3), glm::mat4());
 	
+
 
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-	ImGui::Text("Set aquarium color:");
+	ImGui::Text("Set obstacle color:");
 	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
 
@@ -542,13 +542,16 @@ void renderScene(GLFWwindow* window) {
 	if (!sharkExist && !boids.empty()) {
 		boids[0]->isShark = true;
 	}
+	//
 
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	
 
-	//taregt force:
+
+	//target force:
 	glm::mat4 viewMatrix = createCameraMatrix();
 	glm::mat4 projectionMatrix = createPerspectiveMatrix();
 	applyTargetingForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
@@ -557,14 +560,14 @@ void renderScene(GLFWwindow* window) {
 	applyRepulsionForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
 
 
-	// Boids & Particles
+	// Draw boids & Particles
 	for (Boid* b : boids) {
 		b->update(boids, terrain, obstacle);
 		b->updateParticles(deltaTime);
 
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shark_normal );
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::shark, texture::shark_normal );
 			}
 		}
 		else {
@@ -751,7 +754,6 @@ void init(GLFWwindow* window)
 	loadModelToContext("./models/test.obj", models::testContext);
 	loadModelToContext("./models/goldie.obj", models::goldfishContext);
 	loadModelToContext("./models/golden_fish.obj", models::leaderContext);
-	loadModelToContext("./models/piranha.obj", models::sharkContext);
 
 	//textures:
 	texture::ship = Core::LoadTexture("./textures/spaceship.jpg");
@@ -759,12 +761,12 @@ void init(GLFWwindow* window)
 	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
-	texture::shark = Core::LoadTexture("./textures/Tiles_025_basecolor.jpg");
+	texture::shark = Core::LoadTexture("./textures/Pool_Water_Texture_Diff.jpg");
 	//normal maps:
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
 	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
-	texture::shark_normal = Core::LoadTexture("./textures/Tiles_025_normal.jpg");
+	texture::shark_normal = Core::LoadTexture("./textures/Pool_Water_Texture_nrml.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

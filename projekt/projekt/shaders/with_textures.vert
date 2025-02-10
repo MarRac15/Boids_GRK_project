@@ -43,7 +43,7 @@ void main()
 	vec3 reflectDir = reflect(-pointlightDir,vNormal);
 
 	viewDir_TS = TBN * viewDir;
-	lightDir_TS = TBN * pointlightDir;
+	lightDir_TS = TBN * lightDir;
 	//reflectDir_TS = TBN * reflectDir;
 	//lightPos_TS = TBN * lightPos;
 	//cameraPos_TS = TBN * cameraPos;

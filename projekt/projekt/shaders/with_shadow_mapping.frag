@@ -44,7 +44,7 @@ void main()
 	vec3 N = normalize(vNormal);
 
 	//diffuse:
-	vec3 ambient = 0.3 * lightColor;
+	vec3 ambient = 0.4 * lightColor;
 	//vec3 lightDir = normalize(lightPos - worldPos);
 	vec3 lightDir = normalize(pointlightDir);
 	float intensityDiffuse = max(dot(lightDir, N), 0.0);

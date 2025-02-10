@@ -25,8 +25,12 @@
 
 const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
+
 //window:
 int WIDTH = 500, HEIGHT = 500;
+GLFWwindow* globalWindow;
+bool fullScreen = false;
+GLFWmonitor* monitor = nullptr;
 
 //Terrain:
 
@@ -95,6 +99,7 @@ float lastMouseX = WIDTH/2.0;
 float lastMouseY = HEIGHT/2.0;
 bool firstMouse = true;
 bool leftMousePressed = false;
+bool rightMousePressed = false;
 
 
 //lighting variables:
@@ -123,7 +128,7 @@ float deltaTime = 0.f;
 bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
-glm::vec3 aquarium_color = glm::vec3(0.0f, 0.0f, 1.0f);
+glm::vec3 obstacle_color = glm::vec3(0.0f, 0.0f, 1.0f);
 ;
 
 
@@ -183,6 +188,105 @@ glm::mat4 createLightViewProjection() {
 	return projection * view;
 }
 
+glm::vec3 rayPlaneIntersection(glm::vec3 rayOrigin, glm::vec3 rayDirection, float planeZ) {
+	float t = (planeZ - rayOrigin.z) / rayDirection.z;
+	if (t < 0.0f) return glm::vec3(0.0,0.0,0.0);
+
+	return rayOrigin + t * rayDirection;
+}
+
+std::pair<glm::vec3, glm::vec3> screenToWorld(double mouseX, double mouseY, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight)
+{
+	float ndcX = (2.0f * mouseX) / screenWidth - 1.0f;
+	float ndcY = 1.0f - (2.0f * mouseY) / screenHeight;
+
+	glm::vec4 nearPlanePos = glm::vec4(ndcX, ndcY, -1.0f, 1.0f);
+	glm::vec4 farPlanePos = glm::vec4(ndcX, ndcY, 1.0f, 1.0f);
+	glm::mat4 inverseVP = glm::inverse(projectionMatrix * viewMatrix);
+
+	glm::vec4 nearPlaneWorld = inverseVP * nearPlanePos;
+	glm::vec4 farPlaneWorld = inverseVP * farPlanePos;
+	nearPlaneWorld /= nearPlaneWorld.w;
+	farPlaneWorld /= farPlaneWorld.w;
+
+	glm::vec3 rayOrigin = glm::vec3(nearPlaneWorld);
+	glm::vec3 rayDirection = glm::normalize(glm::vec3(farPlaneWorld - nearPlaneWorld));
+
+	return { rayOrigin, rayDirection };
+}
+
+
+void applyTargetingForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight) {
+
+	if (!leftMousePressed) return; //callback changes this to true when you click on the screen
+
+	if (ImGui::GetIO().WantCaptureMouse)
+	{
+		return;
+	}
+
+	double mouseX, mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+
+	//convert mouse click to world space:
+	std::pair<glm::vec3, glm::vec3> result = screenToWorld(mouseX, mouseY, viewMatrix, projectionMatrix, screenWidth, screenHeight);
+	glm::vec3 rayOrigin = result.first;
+	glm::vec3 rayDirection = result.second;
+
+	float targetDepth = 0.2f;
+	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
+	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
+
+	for (Boid* boid : boids)
+	{
+		glm::vec3 direction = worldMousePos - boid->position;
+		float distance = glm::length(direction);
+
+		if (distance > 0.01f)
+		{
+			direction = glm::normalize(direction);
+			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += direction * forceStrength;
+		}
+	}
+
+}
+
+void applyRepulsionForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat4 viewMatrix, glm::mat4 projectionMatrix, int screenWidth, int screenHeight) {
+
+	if (!rightMousePressed) return; //callback changes this to true when you click on the screen
+
+	if (ImGui::GetIO().WantCaptureMouse)
+	{
+		return;
+	}
+
+	double mouseX, mouseY;
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+
+	//convert mouse click to world space:
+	std::pair<glm::vec3, glm::vec3> result = screenToWorld(mouseX, mouseY, viewMatrix, projectionMatrix, screenWidth, screenHeight);
+	glm::vec3 rayOrigin = result.first;
+	glm::vec3 rayDirection = result.second;
+
+	float targetDepth = 0.2f;
+	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
+	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
+
+	for (Boid* boid : boids)
+	{
+		glm::vec3 direction = boid->position - worldMousePos;
+		float distance = glm::length(direction);
+
+		if (distance > 0.01f)
+		{
+			direction = glm::normalize(direction);
+			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += direction * forceStrength;
+		}
+	}
+
+}
 
 
 void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
@@ -347,8 +451,7 @@ void drawSkyBox() {
 	glDepthMask(GL_TRUE);
 }
 
-void renderScene(GLFWwindow* window)
-{
+void renderScene(GLFWwindow* window) {
 
 	glClearColor(0.4f, 0.4f, 0.8f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -377,13 +480,22 @@ void renderScene(GLFWwindow* window)
 
 	drawTerrain(glm::vec3(0.6, 0.8, 0.6), glm::mat4());
 	
+
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
-	ImGui::Text("Application average framerate: %.1f FPS", 1000.0 / double(ImGui::GetIO().Framerate), double(ImGui::GetIO().Framerate));
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 	ImGui::Text("Set aquarium color:");
-	ImGui::ColorEdit3("change color", (float*)&aquarium_color);
+	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
+
+
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glUseProgram(programTest);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, depthMap);
+	//Core::DrawContext(models::testContext);
+
 
 	// Seperation ON/OFF:
 	static bool seperationEnabled = true;
@@ -393,13 +505,6 @@ void renderScene(GLFWwindow* window)
 		b->setSeparationWeight(newSeparationWeight);
 	}
 
-
-
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glUseProgram(programTest);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-	//Core::DrawContext(models::testContext);
 
 	//Alignment ON/OFF:
 	static bool alignmentEnabled = true;
@@ -425,43 +530,40 @@ void renderScene(GLFWwindow* window)
 		b->setFleeWeight(newFleeWeight);
 	}
 
-	//Leader ON/OFF:
-	//static bool followEnabled = false;
-	/*ImGui::Checkbox("Leader", &followEnabled);
-	float newFollowWeight = followEnabled ? 3.0f : 0.0f;
-	for (Boid* b : boids) {
-		b->setFollowWeight(newFollowWeight);
-	}*/
 
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+	//taregt force:
+	glm::mat4 viewMatrix = createCameraMatrix();
+	glm::mat4 projectionMatrix = createPerspectiveMatrix();
+	applyTargetingForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
+
+	//repulsion force:
+	applyRepulsionForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
+
+
 	// Boids & Particles
 	for (Boid* b : boids) {
 		b->update(boids, terrain, obstacle);
 		b->updateParticles(deltaTime);
 
-		/*if (b->isLeader) {
-			if (followEnabled) {
-				drawObjectTexture(models::leaderContext, b->getMatrix()*glm::scale(glm::vec3(0.01)), texture::leaderFish, texture::fishNormal);
-			}
-		}*/
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shipNormal );
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shark_normal );
 			}
 		}
 		else {
-			//drawObjectPhong(modes::goldfishContext, b->getMatrix(), b->getGroupColor());
+
 			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
 		}
 	}
 	renderParticles(boids);
 
 	// obstacle
-	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), aquarium_color);
+	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
 
 
 	glUseProgram(0);
@@ -519,27 +621,34 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 }
 
-//void cursor_position_callback(GLFWwindow* window, double xPos, double yPos)
-//{
-//	lastMouseX = xPos;
-//	lastMouseY = yPos;
-//}
 
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-
+	
 	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
 		if (action == GLFW_PRESS) {
-			leftMousePressed = true;
+			leftMousePressed = true; 
 		}
 		else if (action == GLFW_RELEASE) {
 			leftMousePressed = false;
 		}
 	}
 
+	if (button == GLFW_MOUSE_BUTTON_RIGHT)
+	{
+		if (action == GLFW_PRESS) {
+			rightMousePressed = true;
+		}
+		else if (action == GLFW_RELEASE) {
+			rightMousePressed = false;
+		}
+	}
+
 }
+
+
 
 
 void loadModelToContext(std::string path, Core::RenderContext& context)
@@ -626,21 +735,14 @@ void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-	//fullscreen - WILL FORCE TO GO INTO FULLSCREEN:
-	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-	glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-
 	//input:
 	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	//ImGUI initialization:
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	//if (!io.WantCaptureMouse) {
-	//	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	//}
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 430");
@@ -678,12 +780,12 @@ void init(GLFWwindow* window)
 	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
-	texture::shark = Core::LoadTexture("./textures/shark.jpg");
+	texture::shark = Core::LoadTexture("./textures/Tiles_025_basecolor.jpg");
 	//normal maps:
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
 	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
-	texture::shark_normal = Core::LoadTexture("./textures/shark_normal.jpg");
+	texture::shark_normal = Core::LoadTexture("./textures/Tiles_025_normal.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {
@@ -695,8 +797,6 @@ void init(GLFWwindow* window)
 	// shark
 	boids.push_back(new Boid(glm::vec3(3.5f,10.2f,4.5f), true, 2, false));
 
-	//leader fish:
-	//boids.push_back(new Boid(randomVec3(), false, 3, true));
 
 	for (Boid* b : boids) {
 		b->initParticles();
@@ -753,6 +853,28 @@ void processInput(GLFWwindow* window)
 		printf("spaceshipDir = glm::vec3(%ff, %ff, %ff);\n", spaceshipDir.x, spaceshipDir.y, spaceshipDir.z);
 	}
 
+
+	//for entering fullscreen mode:
+	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+	{
+		fullScreen = !fullScreen;
+
+		if (fullScreen) 
+		{
+			glfwSetWindowMonitor(window, nullptr, 50, 50, WIDTH, HEIGHT, GLFW_DONT_CARE);
+		}
+		else {
+			monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode * mode = glfwGetVideoMode(monitor);
+			WIDTH = mode->width;
+			HEIGHT = mode->height;
+			glfwSetWindowMonitor(window, monitor, 0, 0, WIDTH, HEIGHT, mode->refreshRate);
+		}
+		
+		
+	}
+
+	//enable/disable cursor:
 	bool iKeyPressedNow = glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS;
 	if (iKeyPressedNow && !iKeyPressedLastFrame)
 	{

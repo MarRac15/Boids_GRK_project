@@ -45,11 +45,9 @@ class Boid {
 public:
 	glm::vec3 position;
 	glm::vec3 velocity;  // (szybkość + kierunek)
-	//glm::vec3 targetPosition;
 	int groupId;
 	bool isShark;
 	bool isLeader;
-	//int followGroup;
 	int attackGroup;
 
 	static const int PARTICLES_COUNT = 3;
@@ -78,10 +76,6 @@ public:
 		{
 			attackGroup = randomInt(0, 1);
 		}
-		/*if (isLeader == true)
-		{
-			followGroup = randomInt(0,1);
-		}*/
 		velocity = glm::vec3(0.01f);
 	}
 
@@ -157,19 +151,11 @@ public:
 		FLEE_WEIGHT = weight;
 	}
 
-	//void setFollowWeight(float weight)
-	//{
-	//	FOLLOW_WEIGHT = weight;
-	//}
-
 	bool getIsShark()
 	{
 		return isShark;
 	}
 
-	//bool getIsLeader() {
-	//	return isLeader;
-	//}
 
 	glm::vec3 separate(std::vector<Boid*>& boids) {
 		glm::vec3 avoid_vector(0.0f);
@@ -264,54 +250,6 @@ public:
 		return escapeDirection;
 	}
 
-	//glm::vec3 leaderBehaviour()
-	//{
-	//	glm::vec3 direction = targetPosition - position;
-	//	if (glm::length(direction) < 0.5f)
-	//	{
-	//		targetPosition = glm::vec3(
-	//			/*randomFloat(minX, maxX),
-	//			randomFloat(minY, maxY),
-	//			randomFloat(minZ, maxZ)*/
-	//		);
-	//	}
-	//	glm::vec3 desiredVelocity = glm::normalize(direction) * maxSpeed;
-	//	glm::vec3 steering = desiredVelocity - velocity;
-	//	steering = glm::clamp(steering, glm::vec3(-maxForce), glm::vec3(maxForce));
-	//	return steering;
-	//}
-
-	//glm::vec3 followTheLeader(std::vector<Boid*>& boids)
-	//{
-	//	glm::vec3 followDirection(0.0f);
-	//	glm::vec3 leaderPosition(0.0f);
-	//	glm::vec3 leaderVelocity(0.0f);
-	//	bool foundLeader=false;
-
-	//	for (Boid* other_boid : boids)
-	//	{
-	//		if (other_boid->isLeader)
-	//		{
-	//			leaderPosition = other_boid->position;
-	//			leaderVelocity = other_boid->velocity;
-	//			foundLeader = true;
-	//			break;
-
-	//		}
-	//	}
-	//		if (foundLeader)
-	//		{
-	//			followDirection = leaderPosition - position;
-	//			float distance = glm::length(followDirection);
-
-	//			if (distance <= NEIGHBOUR_DISTANCE) {
-	//				followDirection = glm::normalize(followDirection) * FOLLOW_WEIGHT;
-	//			}
-
-	//		}
-	//	
-	//	return followDirection;
-	//}
 
 	void checkSphereCollision(const Obstacle& obstacle) {
 		glm::vec3 futurePosition = position + velocity;
@@ -336,11 +274,6 @@ public:
 
 	void update(std::vector<Boid*>& boids, Terrain terrain, Obstacle obstacle) {
 
-		/*if (isLeader) {
-			glm::vec3 leaderForce = leaderBehaviour();
-			velocity += leaderForce;
-		}*/
-
 		if (isShark) {
 			glm::vec3 _shark_Attack = sharkAttack(boids);
 			velocity = _shark_Attack * maxSpeed;
@@ -355,7 +288,6 @@ public:
 			glm::vec3 _aligment = align(boids) * ALIGMENT_WEIGHT;
 			glm::vec3 _cohesion = cohesion(boids) * COHESION_WEIGHT;
 			glm::vec3 _flee = fleeFromShark(boids) * FLEE_WEIGHT;
-			//glm::vec3 _follow = followTheLeader(boids) * FOLLOW_WEIGHT;
 
 			glm::vec3 steering = _separation + _aligment + _cohesion;
 

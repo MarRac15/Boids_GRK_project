@@ -119,12 +119,13 @@ glm::vec3 obstacleTransformation = glm::vec3(0.f, 7.f, 0.f);
 float lastTime = -1.f;
 float deltaTime = 0.f;
 
-// global variables needed for imgui:
+// global variables for imgui:
 bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
+bool useNormalMapping = true;
 glm::vec3 obstacle_color = glm::vec3(0.0f, 0.0f, 1.0f);
-;
+
 
 
 
@@ -268,16 +269,17 @@ void applyRepulsionForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat
 	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
 	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
 
+
 	for (Boid* boid : boids)
 	{
-		glm::vec3 direction = boid->position - worldMousePos;
-		float distance = glm::length(direction);
+		glm::vec3 fleeDirection = boid->position - worldMousePos;
+		float distance = glm::length(fleeDirection);
 
 		if (distance > 0.01f)
 		{
-			direction = glm::normalize(direction);
-			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
-			boid->velocity += direction * forceStrength;
+			fleeDirection = glm::normalize(fleeDirection);
+			float forceStrength = 5.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += fleeDirection * forceStrength;
 		}
 	}
 
@@ -430,6 +432,8 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 	terrain.drawTerrain();
 }
 
+glm::vec3 randomVec3();
+
 
 void renderScene(GLFWwindow* window) {
 
@@ -444,7 +448,8 @@ void renderScene(GLFWwindow* window) {
 
 	float time = glfwGetTime();
 	updateDeltaTime(time);
-	glUseProgram(programPhSh);
+	glUseProgram(programTex);
+	glUniform1i(glGetUniformLocation(programTex, "useNormalMapping"), useNormalMapping);
 	
 	renderShadowmapPointLight();
 
@@ -467,13 +472,6 @@ void renderScene(GLFWwindow* window) {
 	ImGui::Text("Set aquarium color:");
 	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
-
-
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glUseProgram(programTest);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-	//Core::DrawContext(models::testContext);
 
 
 	// Seperation ON/OFF:
@@ -509,6 +507,41 @@ void renderScene(GLFWwindow* window) {
 		b->setFleeWeight(newFleeWeight);
 	}
 
+	//Normal mapping ON/OFF:
+	ImGui::Checkbox("Normal mapping", &useNormalMapping);
+
+	//Number of boids:
+	static int boidCount = boids.size();
+	ImGui::SliderInt("Number of boids", &boidCount, 1, 500);
+	if (boidCount > boids.size())
+	{
+		while (boids.size() < boidCount)
+		{
+			boids.push_back(new Boid(randomVec3(), false, randomInt(0,1), false));
+		}
+	}
+	if (boidCount < boids.size())
+	{
+		while (boids.size() > boidCount)
+		{
+			delete boids.back();
+			boids.pop_back();
+		}
+	}
+
+	// add shark if it gets lost while adding new boids:
+	bool sharkExist = false;
+	for (Boid* b : boids) {
+		if (b->isShark)
+		{
+			sharkExist = true;
+			break;
+		}
+	}
+
+	if (!sharkExist && !boids.empty()) {
+		boids[0]->isShark = true;
+	}
 
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();

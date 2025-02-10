@@ -296,7 +296,6 @@ public:
 		int i = (int)((x / scalePixel) + (terrainHeight / 2.0f));  // pion
 		int j = (int)((z / scalePixel) + (terrainWidth / 2.0f));   // poziom
 
-		std::cout << " " << scalePixel << std::endl;
 
 
 		if (i < 0 || i >= terrainHeight || j < 0 || j >= terrainWidth) {

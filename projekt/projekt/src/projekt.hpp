@@ -76,6 +76,7 @@ Core::RenderContext sphereContext;
 GLuint programPhSh;
 GLuint programTex;
 GLuint programSkyBox;
+GLuint programDisco;
 
 Core::Shader_Loader shaderLoader;
 
@@ -113,12 +114,14 @@ glm::vec3 obstacleTransformation = glm::vec3(0.f, 7.f, 0.f);
 float lastTime = -1.f;
 float deltaTime = 0.f;
 
-// global variables needed for imgui:
+// global variables for imgui:
 bool isMouseCaptured = false;
 bool cursorDisabled = true;
 bool iKeyPressedLastFrame = false;
+bool useNormalMapping = true;
+bool discoMode = false;
 glm::vec3 obstacle_color = glm::vec3(0.0f, 0.0f, 1.0f);
-;
+
 
 
 
@@ -262,16 +265,17 @@ void applyRepulsionForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat
 	glm::vec3 worldMousePos = rayPlaneIntersection(rayOrigin, rayDirection, targetDepth);
 	if (worldMousePos == glm::vec3(0.0, 0.0, 0.0)) return;
 
+
 	for (Boid* boid : boids)
 	{
-		glm::vec3 direction = boid->position - worldMousePos;
-		float distance = glm::length(direction);
+		glm::vec3 fleeDirection = boid->position - worldMousePos;
+		float distance = glm::length(fleeDirection);
 
 		if (distance > 0.01f)
 		{
-			direction = glm::normalize(direction);
-			float forceStrength = 10.0f / (distance * 0.5f + 1.0f);
-			boid->velocity += direction * forceStrength;
+			fleeDirection = glm::normalize(fleeDirection);
+			float forceStrength = 5.0f / (distance * 0.5f + 1.0f);
+			boid->velocity += fleeDirection * forceStrength;
 		}
 	}
 
@@ -311,10 +315,29 @@ void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLui
 	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	
-
 	Core::DrawContext(context);
 }
+
+void drawObjectDisco(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color) {
+
+	glUseProgram(programDisco);
+
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programDisco, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programDisco, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+	glUniform3f(glGetUniformLocation(programDisco, "color"), color.x, color.y, color.z);
+	glUniform3f(glGetUniformLocation(programDisco, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programDisco, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
+	glUniform3f(glGetUniformLocation(programDisco, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
+	glUniform3f(glGetUniformLocation(programDisco, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
+
+	float time = glfwGetTime();
+	glUniform1f(glGetUniformLocation(programDisco, "time"), time);
+	Core::DrawContext(context);
+}
+
+
 
 
 void renderParticles(const std::vector<Boid*>& boids) {
@@ -344,7 +367,8 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 	terrain.drawTerrain();
 }
 
-void drawSkyBox() {
+glm::vec3 randomVec3();
+
 
 	glDepthMask(GL_FALSE);
 	glUseProgram(programSkyBox);
@@ -371,7 +395,10 @@ void renderScene(GLFWwindow* window) {
 
 	float time = glfwGetTime();
 	updateDeltaTime(time);
-	glUseProgram(programPhSh);
+
+
+	glUseProgram(programTex);
+	glUniform1i(glGetUniformLocation(programTex, "useNormalMapping"), useNormalMapping);
 	
 	
 	drawSkyBox();
@@ -387,14 +414,14 @@ void renderScene(GLFWwindow* window) {
 	drawTerrain(glm::vec3(0.6, 0.8, 0.6), glm::mat4());
 	
 
+
 	//IMGUI WINDOWS:
 	ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 	ImGui::Begin("PRESS \"I\" TO ENABLE/DISABLE CURSOR ");
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-	ImGui::Text("Set aquarium color:");
+	ImGui::Text("Set obstacle color:");
 	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
-
 
 
 	// Seperation ON/OFF:
@@ -430,13 +457,54 @@ void renderScene(GLFWwindow* window) {
 		b->setFleeWeight(newFleeWeight);
 	}
 
+	//Normal mapping ON/OFF:
+	ImGui::Checkbox("Normal mapping", &useNormalMapping);
+
+	//Number of boids:
+	static int boidCount = boids.size();
+	ImGui::SliderInt("Number of boids", &boidCount, 1, 500);
+	if (boidCount > boids.size())
+	{
+		while (boids.size() < boidCount)
+		{
+			boids.push_back(new Boid(randomVec3(), false, randomInt(0,1), false));
+		}
+	}
+	if (boidCount < boids.size())
+	{
+		while (boids.size() > boidCount)
+		{
+			delete boids.back();
+			boids.pop_back();
+		}
+	}
+
+	// add shark if it gets lost while adding new boids:
+	bool sharkExist = false;
+	for (Boid* b : boids) {
+		if (b->isShark)
+		{
+			sharkExist = true;
+			break;
+		}
+	}
+
+	if (!sharkExist && !boids.empty()) {
+		boids[0]->isShark = true;
+	}
+	//
+
+	//DISCO MODE:
+	ImGui::Checkbox("DISCO MODE", &discoMode);
 
 	ImGui::Text("PRESS ESC TO CLOSE PROGRAM");
 	ImGui::End();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	
 
-	//taregt force:
+
+	//target force:
 	glm::mat4 viewMatrix = createCameraMatrix();
 	glm::mat4 projectionMatrix = createPerspectiveMatrix();
 	applyTargetingForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
@@ -445,25 +513,44 @@ void renderScene(GLFWwindow* window) {
 	applyRepulsionForce(boids, window, viewMatrix, projectionMatrix, WIDTH, HEIGHT);
 
 
-	// Boids & Particles
+	// Draw boids & Particles
 	for (Boid* b : boids) {
 		b->update(boids, terrain, obstacle);
 		b->updateParticles(deltaTime);
 
 		if (b->isShark) {
 			if (fleeEnabled) {
-				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::blueTest, texture::shark_normal );
+				if (discoMode)
+				{
+					drawObjectDisco(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+				}
+				else {
+					drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::shark, texture::shark_normal);
+				}
 			}
 		}
 		else {
-
-			drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
+			if (discoMode)
+			{
+				drawObjectDisco(models::goldfishContext, b->getMatrix(), b->getGroupColor());
+			}
+			else {
+				drawObjectTexture(models::goldfishContext, b->getMatrix(), texture::fish, texture::fishNormal);
+			}
+			
 		}
 	}
 	renderParticles(boids);
 
 	// obstacle
-	drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	if (discoMode)
+	{
+		drawObjectDisco(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	}
+	else {
+		drawObjectPhong(models::sphereContext, glm::mat4() * glm::translate(obstacleTransformation), obstacle_color);
+	}
+	
 
 
 	glUseProgram(0);
@@ -635,6 +722,7 @@ void init(GLFWwindow* window)
 	programTex = shaderLoader.CreateProgram("shaders/with_textures.vert", "shaders/with_textures.frag");
 	programSkyBox = shaderLoader.CreateProgram("shaders/cubemap.vert", "shaders/cubemap.frag");
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
+	programDisco = shaderLoader.CreateProgram("shaders/shader_disco.vert", "shaders/shader_disco.frag");
 
 	initSkyBox();
 
@@ -659,12 +747,12 @@ void init(GLFWwindow* window)
 	texture::leaderFish = Core::LoadTexture("./textures/golden_fish.jpg");
 	texture::brickwall = Core::LoadTexture("./textures/brickwall.jpg");
 	texture::blueTest = Core::LoadTexture("./textures/blueTest.jpg");
-	texture::shark = Core::LoadTexture("./textures/Tiles_025_basecolor.jpg");
+	texture::shark = Core::LoadTexture("./textures/Pool_Water_Texture_Diff.jpg");
 	//normal maps:
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::fishNormal = Core::LoadTexture("./textures/Stylized_Scales_003_normal.png");
 	texture::brickwall_normal = Core::LoadTexture("./textures/brickwall_normal.jpg");
-	texture::shark_normal = Core::LoadTexture("./textures/Tiles_025_normal.jpg");
+	texture::shark_normal = Core::LoadTexture("./textures/Pool_Water_Texture_nrml.jpg");
 
 	// fish --> red
 	for (int i = 0; i <= 4; i++) {

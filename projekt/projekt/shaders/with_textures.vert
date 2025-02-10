@@ -8,7 +8,6 @@ layout(location = 4) in vec3 vertexBitangent;
 
 uniform mat4 transformation;
 uniform mat4 modelMatrix;
-uniform mat4 lightVP;
 
 uniform vec3 cameraPos;
 uniform vec3 pointlightDir;
@@ -18,20 +17,14 @@ out vec2 texCoord;
 out vec3 vNormal;
 out vec3 vPosition;
 out vec3 worldPos;
-out vec4 sunSpacePos;
 out vec3 viewDir_TS;
 out vec3 lightDir_TS;
-//out vec3 reflectDir_TS;
-//out vec3 cameraPos_TS;
-//out vec3 lightPos_TS;
-//out vec3 worldPos_TS;
 
 void main()
 {
 	texCoord = vertexTexCoord;
 	vNormal = normalize((modelMatrix * vec4(vertexNormal,0.0)).xyz);
 	vPosition = (modelMatrix * vec4(vertexPosition,1.0)).xyz;
-	sunSpacePos = lightVP*modelMatrix * vec4(vertexPosition,1.0);
 	worldPos = (modelMatrix* vec4(vertexPosition,1)).xyz;
 
 	vec3 tangent = normalize((modelMatrix * vec4(vertexTangent, 0.0)).xyz);
@@ -43,11 +36,7 @@ void main()
 	vec3 reflectDir = reflect(-pointlightDir,vNormal);
 
 	viewDir_TS = TBN * viewDir;
-	lightDir_TS = TBN * pointlightDir;
-	//reflectDir_TS = TBN * reflectDir;
-	//lightPos_TS = TBN * lightPos;
-	//cameraPos_TS = TBN * cameraPos;
-	//worldPos_TS = TBN * worldPos;
+	lightDir_TS = TBN * lightDir;
 
 	gl_Position = transformation * vec4(vertexPosition, 1.0);
 	

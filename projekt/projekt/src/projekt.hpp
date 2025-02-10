@@ -422,7 +422,7 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 
 glm::vec3 randomVec3();
 
-
+void drawSkyBox(){
 	glDepthMask(GL_FALSE);
 	glUseProgram(programSkyBox);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxWater);

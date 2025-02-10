@@ -276,6 +276,8 @@ void applyRepulsionForce(std::vector<Boid*>& boids, GLFWwindow* window, glm::mat
 			fleeDirection = glm::normalize(fleeDirection);
 			float forceStrength = 5.0f / (distance * 0.5f + 1.0f);
 			boid->velocity += fleeDirection * forceStrength;
+
+			boid->applyBoundaryForce(terrain); // new
 		}
 	}
 

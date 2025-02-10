@@ -90,7 +90,7 @@ public:
 	}
 
 
-	void applyBoundaryForce(Terrain terrain) {
+	void applyBoundaryForce_OLD(Terrain terrain) {
 		glm::vec3 boundaryForce(0.0f);
 
 		float minY = terrain.getHeight(position.x, position.z) + 0.6;
@@ -124,6 +124,97 @@ public:
 		else if (futurePosition.y < minY) {
 			boundaryForce.y = maxForce;
 			velocity += boundaryForce;
+			return;
+		}
+
+		velocity = glm::mix(velocity, velocity + boundaryForce, 0.09f);
+	}
+
+	void applyBoundaryForce(Terrain terrain) {
+		glm::vec3 boundaryForce(0.0f);
+
+		float minY = terrain.getHeight(position.x, position.z) + 0.6;
+
+
+		glm::vec3 futurePosition = position + velocity;
+
+		if (futurePosition.x > maxX) {
+			boundaryForce.x = -maxForce;
+
+
+
+			if (position.x >= maxX + 1.0f) {
+				velocity = glm::vec3(-maxX, position.y, position.z);
+
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(maxX + 1.0f, position.y, position.z);
+			}
+
+
+		}
+		else if (futurePosition.x < minX) {
+			boundaryForce.x = maxForce;
+			if (position.x <= minX - 1.0f) {
+				velocity = glm::vec3(-minX, position.y, position.z);
+
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(minX - 1.0f, position.y, position.z);
+			}
+		}
+
+		if (futurePosition.y > maxY) {
+			boundaryForce.y = -maxForce;
+
+			if (position.y >= maxY + 1.0f) {
+				velocity = glm::vec3(position.x, -maxY, position.z);
+
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(position.x, maxY + 1.0f, position.z);
+			}
+
+
+		}
+
+		if (futurePosition.z > maxZ) {
+			boundaryForce.z = -maxForce;
+			if (position.z >= maxZ + 1.0f) {
+				velocity = glm::vec3(position.x, position.y, -maxZ);
+
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(position.x, position.y, maxZ + 1.0f);
+			}
+		}
+		else if (futurePosition.z < minZ) {
+			boundaryForce.z = maxForce;
+			if (position.z <= minZ - 1.0f) {
+				velocity = glm::vec3(position.x, position.y, -minZ);
+
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(position.x, position.y, minZ - 1.0f);
+			}
+		}
+
+		else if (futurePosition.y < minY) {
+			boundaryForce.y = maxForce;
+			//velocity += boundaryForce;
+			if (position.y <= minY - 0.1) {
+				boundaryForce.y = maxForce;
+				velocity += boundaryForce;
+				if (glm::length(velocity) > maxSpeed) {
+					velocity = glm::normalize(velocity) * maxSpeed;
+				}
+				position = glm::vec3(position.x, minY, position.z);
+			}
 			return;
 		}
 

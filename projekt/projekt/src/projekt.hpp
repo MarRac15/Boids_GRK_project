@@ -36,7 +36,6 @@ GLFWmonitor* monitor = nullptr;
 
 GLuint skyboxWater;
 
-
 Terrain terrain;
 unsigned int NUM_STRIPS;
 unsigned int NUM_VERTS_PER_STRIP;
@@ -73,14 +72,8 @@ namespace texture {
 Core::RenderContext shipContext;
 Core::RenderContext sphereContext;
 
-GLuint depthMapFBO;
-GLuint depthMap;
-
 //shader programs:
-GLuint programPBR;
 GLuint programPhSh;
-GLuint programTest;
-GLuint programDepth;
 GLuint programTex;
 GLuint programSkyBox;
 
@@ -111,10 +104,6 @@ glm::vec3 pointlightPos = glm::vec3(0.f,5.f,-5.f);
 glm::vec3 pointlightDir = glm::vec3(0., -0.3, 0.5);
 glm::vec3 pointlightColor = glm::vec3(0.9, 0.6, 0.6);
 
-glm::vec3 spotlightPos = glm::vec3(0, 0., 0);
-glm::vec3 spotlightConeDir = glm::vec3(0, 0, 0);
-glm::vec3 spotlightColor = glm::vec3(0.4, 0.4, 0.9) * 3;
-float spotlightPhi = 3.14 / 4;
 
 // boids and obstacles
 std::vector<Boid*> boids;
@@ -301,12 +290,6 @@ void drawObjectPhong(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	glm::mat4 lightVP = createLightViewProjection();
-	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
-
-
 
 	Core::DrawContext(context);
 }
@@ -328,81 +311,9 @@ void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLui
 	glUniform3f(glGetUniformLocation(programTex, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programTex, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	//glm::mat4 lightVP = createLightViewProjection();
-	//glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-
-
+	
 
 	Core::DrawContext(context);
-}
-
-void drawObjectPBR(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, float roughness, float metallic) {
-
-	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
-	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(programPBR, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniformMatrix4fv(glGetUniformLocation(programPBR, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-
-	glUniform1f(glGetUniformLocation(programPBR, "exposition"), exposition);
-
-	glUniform1f(glGetUniformLocation(programPBR, "roughness"), roughness);
-	glUniform1f(glGetUniformLocation(programPBR, "metallic"), metallic);
-
-	glUniform3f(glGetUniformLocation(programPBR, "color"), color.x, color.y, color.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "sunDir"), sunDir.x, sunDir.y, sunDir.z);
-	glUniform3f(glGetUniformLocation(programPBR, "sunColor"), sunColor.x, sunColor.y, sunColor.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "lightPos"), pointlightPos.x, pointlightPos.y, pointlightPos.z);
-	glUniform3f(glGetUniformLocation(programPBR, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
-
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightConeDir"), spotlightConeDir.x, spotlightConeDir.y, spotlightConeDir.z);
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightPos"), spotlightPos.x, spotlightPos.y, spotlightPos.z);
-	glUniform3f(glGetUniformLocation(programPBR, "spotlightColor"), spotlightColor.x, spotlightColor.y, spotlightColor.z);
-	glUniform1f(glGetUniformLocation(programPBR, "spotlightPhi"), spotlightPhi);
-	Core::DrawContext(context);
-
-}
-void drawTerrainDepth(glm::mat4 viewProjection, glm::mat4 modelMatrix) {
-	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniformMatrix4fv(glGetUniformLocation(programDepth, "lightViewProjection"), 1, GL_FALSE, (float*)&viewProjection);
-	terrain.drawTerrain();
-}
-
-void drawObjectDepth(Core::RenderContext& context, glm::mat4 viewProjection, glm::mat4 modelMatrix) {
-	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniformMatrix4fv(glGetUniformLocation(programDepth, "lightViewProjection"), 1, GL_FALSE, (float*)&viewProjection);
-	Core::DrawContext(context);
-}
-
-
-
-void renderShadowmapPointLight() {
-	glUseProgram(programDepth);
-	float time = glfwGetTime();
-	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-	glm::mat4 viewProjection = createLightViewProjection();
-	drawObjectDepth(models::aquariumContext, viewProjection,glm::mat4() *
-		glm::scale(glm::vec3(0.3, 0.6, 0.8)) *
-		glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
-		glm::translate(glm::vec3(0.f, 0.f, 2.f)));
-	drawObjectDepth(models::sphereContext, viewProjection,glm::mat4() * glm::translate(obstacleTransformation));
-
-	drawTerrainDepth(viewProjection, glm::mat4());
-
-	for (Boid* b : boids) {
-		drawObjectDepth(models::goldfishContext, viewProjection, b->getMatrix());
-
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, WIDTH, HEIGHT);
 }
 
 
@@ -430,10 +341,6 @@ void drawTerrain(glm::vec3 color, glm::mat4 modelMatrix) {
 	glUniform3f(glGetUniformLocation(programPhSh, "pointlightDir"), pointlightDir.x, pointlightDir.y, pointlightDir.z);
 	glUniform3f(glGetUniformLocation(programPhSh, "lightColor"), pointlightColor.x, pointlightColor.y, pointlightColor.z);
 
-	glm::mat4 lightVP = createLightViewProjection();
-	glUniformMatrix4fv(glGetUniformLocation(programPhSh, "lightVP"), 1, GL_FALSE, (float*)&lightVP);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
 	terrain.drawTerrain();
 }
 
@@ -466,8 +373,7 @@ void renderScene(GLFWwindow* window) {
 	updateDeltaTime(time);
 	glUseProgram(programPhSh);
 	
-	renderShadowmapPointLight();
-
+	
 	drawSkyBox();
 	
 	//drawObjectTexture(models::aquariumContext, glm::mat4() * glm::scale(glm::vec3(0.4)) * glm::rotate(glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 3, 4);
@@ -489,12 +395,6 @@ void renderScene(GLFWwindow* window) {
 	ImGui::ColorEdit3("change color", (float*)&obstacle_color);
 	ImGui::Text("Enable or disable the rules:");
 
-
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glUseProgram(programTest);
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, depthMap);
-	//Core::DrawContext(models::testContext);
 
 
 	// Seperation ON/OFF:
@@ -711,25 +611,6 @@ void initSkyBox() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
-void initDepthMap() {
-	glGenFramebuffers(1, &depthMapFBO);
-
-	glGenTextures(1, &depthMap);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-		SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-}
 
 void init(GLFWwindow* window)
 {
@@ -749,14 +630,12 @@ void init(GLFWwindow* window)
 
 
 	glEnable(GL_DEPTH_TEST);
-	programPBR = shaderLoader.CreateProgram("shaders/shader_9_1.vert", "shaders/shader_9_1.frag");
+	
 	programPhSh = shaderLoader.CreateProgram("shaders/with_shadow_mapping.vert", "shaders/with_shadow_mapping.frag");
-	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 	programTex = shaderLoader.CreateProgram("shaders/with_textures.vert", "shaders/with_textures.frag");
 	programSkyBox = shaderLoader.CreateProgram("shaders/cubemap.vert", "shaders/cubemap.frag");
 	//programTex = shaderLoader.CreateProgram("shaders/normal_test.vert", "shaders/normal_test.frag");
 
-	initDepthMap();
 	initSkyBox();
 
 	terrain.createTerrainFromNoise(20,20,3.0);
